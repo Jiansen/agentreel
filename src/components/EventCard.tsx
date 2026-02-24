@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import type { TimelineEvent, EventType } from "@/types/timeline";
 import { useState } from "react";
+import MarkdownContent from "./MarkdownContent";
 
 const TYPE_CONFIG: Record<
   EventType,
@@ -229,12 +230,34 @@ function getEventPreview(event: TimelineEvent): string {
 
 function EventDetail({ event }: { event: TimelineEvent }) {
   switch (event.type) {
-    case "message.user":
-    case "message.agent": {
+    case "message.user": {
       const content = (event.data.content as string) ?? "";
       return (
-        <div className="markdown-content text-sm whitespace-pre-wrap break-words">
+        <div className="text-sm whitespace-pre-wrap break-words text-[var(--text-primary)]">
           {content}
+        </div>
+      );
+    }
+    case "message.agent": {
+      const content = (event.data.content as string) ?? "";
+      const meta: string[] = [];
+      if (event.data.model) meta.push(`Model: ${event.data.model as string}`);
+      if (event.data.tokens) meta.push(`${(event.data.tokens as number).toLocaleString()} tokens`);
+      if (event.data.cost_usd) meta.push(`$${(event.data.cost_usd as number).toFixed(4)}`);
+      if (event.data.duration_ms) meta.push(`${((event.data.duration_ms as number) / 1000).toFixed(1)}s`);
+
+      return (
+        <div>
+          {meta.length > 0 && (
+            <div className="flex gap-2 mb-2 flex-wrap">
+              {meta.map((m, i) => (
+                <span key={i} className="text-xs px-1.5 py-0.5 rounded bg-[var(--bg-primary)] text-[var(--text-muted)]">
+                  {m}
+                </span>
+              ))}
+            </div>
+          )}
+          <MarkdownContent content={content} />
         </div>
       );
     }

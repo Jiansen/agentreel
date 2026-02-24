@@ -96,6 +96,69 @@ export function parseOpenClawJsonl(raw: string): ParsedSession {
     const ts = extractTimestamp(msg, i);
 
     if (msg.role === "user") {
+      // Check if this "user" message is actually tool results
+      const contentBlocks = Array.isArray(msg.content) ? msg.content : [];
+      const hasToolResults = contentBlocks.some(
+        (b) => b.type === "tool_result"
+      );
+
+      if (hasToolResults) {
+        // Process tool results only — skip creating a user message event
+        for (const block of contentBlocks) {
+          if (block.type === "tool_result" && block.tool_use_id) {
+            seq++;
+            const resultText =
+              typeof block.content === "string"
+                ? block.content
+                : contentToText(
+                    block.content as OpenClawContentBlock[]
+                  );
+
+            let durationMs: number | undefined;
+            const requestInfo = toolTimings.get(block.tool_use_id);
+            if (requestInfo) {
+              const requestTime = new Date(
+                requestInfo.timestamp
+              ).getTime();
+              const resultTime = new Date(ts).getTime();
+              if (resultTime > requestTime) {
+                durationMs = resultTime - requestTime;
+              }
+            }
+
+            events.push({
+              seq,
+              type: "tool.result",
+              timestamp: ts,
+              data: {
+                tool_use_id: block.tool_use_id,
+                output: resultText,
+                is_error: block.is_error ?? false,
+              },
+              durationMs,
+              raw: block,
+            });
+
+            if (block.is_error) {
+              seq++;
+              events.push({
+                seq,
+                type: "error",
+                timestamp: ts,
+                data: {
+                  source: "tool_result",
+                  tool_use_id: block.tool_use_id,
+                  message: resultText.slice(0, 500),
+                },
+                raw: block,
+              });
+            }
+          }
+        }
+        continue;
+      }
+
+      // Regular user message
       seq++;
       events.push({
         seq,
@@ -171,8 +234,7 @@ export function parseOpenClawJsonl(raw: string): ParsedSession {
       continue;
     }
 
-    // tool_result messages come as role: "user" with content blocks of type tool_result
-    // But some transcripts embed them differently. Also handle top-level tool results.
+    // Non-user, non-assistant messages with tool results (fallback for unusual formats)
     if (Array.isArray(msg.content)) {
       for (const block of msg.content) {
         if (block.type === "tool_result" && block.tool_use_id) {
@@ -181,16 +243,6 @@ export function parseOpenClawJsonl(raw: string): ParsedSession {
             typeof block.content === "string"
               ? block.content
               : contentToText(block.content as OpenClawContentBlock[]);
-
-          let durationMs: number | undefined;
-          const requestInfo = toolTimings.get(block.tool_use_id);
-          if (requestInfo) {
-            const requestTime = new Date(requestInfo.timestamp).getTime();
-            const resultTime = new Date(ts).getTime();
-            if (resultTime > requestTime) {
-              durationMs = resultTime - requestTime;
-            }
-          }
 
           events.push({
             seq,
@@ -201,24 +253,8 @@ export function parseOpenClawJsonl(raw: string): ParsedSession {
               output: resultText,
               is_error: block.is_error ?? false,
             },
-            durationMs,
             raw: block,
           });
-
-          if (block.is_error) {
-            seq++;
-            events.push({
-              seq,
-              type: "error",
-              timestamp: ts,
-              data: {
-                source: "tool_result",
-                tool_use_id: block.tool_use_id,
-                message: resultText.slice(0, 500),
-              },
-              raw: block,
-            });
-          }
         }
       }
     }

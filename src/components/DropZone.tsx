@@ -139,22 +139,41 @@ export default function DropZone({ onFileLoaded }: DropZoneProps) {
         </AnimatePresence>
       </motion.div>
 
-      {/* Supported formats hint */}
+      {/* Try Demo + Supported formats */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 0.5 }}
-        className="mt-6 flex gap-3 text-xs text-[var(--text-muted)]"
+        transition={{ delay: 0.4 }}
+        className="mt-8 flex flex-col items-center gap-4"
       >
-        <span className="px-2 py-1 rounded-md bg-[var(--bg-secondary)] border border-[var(--border)]">
-          .jsonl
-        </span>
-        <span className="px-2 py-1 rounded-md bg-[var(--bg-secondary)] border border-[var(--border)]">
-          OpenClaw transcript
-        </span>
-        <span className="px-2 py-1 rounded-md bg-[var(--bg-secondary)] border border-[var(--border)]">
-          Local only — nothing uploaded
-        </span>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsLoading(true);
+            fetch("/demo.jsonl")
+              .then((r) => r.text())
+              .then((content) => {
+                onFileLoaded(content, "demo.jsonl");
+                setIsLoading(false);
+              })
+              .catch(() => setIsLoading(false));
+          }}
+          className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[var(--accent-blue)] to-[var(--accent-purple)] text-white font-medium text-sm hover:opacity-90 transition-opacity shadow-lg shadow-[var(--accent-blue)]/20"
+        >
+          Try with demo transcript
+        </button>
+
+        <div className="flex gap-3 text-xs text-[var(--text-muted)]">
+          <span className="px-2 py-1 rounded-md bg-[var(--bg-secondary)] border border-[var(--border)]">
+            .jsonl
+          </span>
+          <span className="px-2 py-1 rounded-md bg-[var(--bg-secondary)] border border-[var(--border)]">
+            OpenClaw transcript
+          </span>
+          <span className="px-2 py-1 rounded-md bg-[var(--bg-secondary)] border border-[var(--border)]">
+            Local only — nothing uploaded
+          </span>
+        </div>
       </motion.div>
     </div>
   );

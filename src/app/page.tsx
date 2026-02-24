@@ -26,7 +26,7 @@ export default function Home() {
     }
   }, []);
 
-  // Check URL hash for shared data on mount
+  // Check URL hash for shared data or ?demo on mount
   useEffect(() => {
     const hash = window.location.hash;
     if (hash.startsWith("#d=")) {
@@ -34,7 +34,15 @@ export default function Home() {
       const content = decompressFromUrl(encoded);
       if (content) {
         loadContent(content, "shared link");
+        return;
       }
+    }
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("demo")) {
+      fetch("/demo.jsonl")
+        .then((r) => r.text())
+        .then((content) => loadContent(content, "demo"))
+        .catch(() => {});
     }
   }, [loadContent]);
 
