@@ -94,6 +94,10 @@ openclaw agent --local --session-id my-task --message "Analyze this server"
 
 The relay server auto-detects new session files and starts streaming them.
 
+### 4. 24/7 Live Streaming Setup
+
+For a full 24/7 streaming setup (VNC desktop → YouTube/Twitch), see the **[deploy/](deploy/)** directory. It includes server provisioning, task automation, RTMP streaming, process monitoring, and a one-command `go_live.sh` startup script.
+
 ## Supported Formats
 
 | Format | Status | Notes |
@@ -125,6 +129,13 @@ agentreel/
     types/          # Canonical timeline types (TimelineEvent, ParsedSession)
   server/
     relay_server.py # SSE relay for live mode (Python, stdlib only)
+  deploy/
+    setup_server.sh # Server setup (Node.js, OpenClaw, VNC, ffmpeg, Docker)
+    go_live.sh      # One-command 24h live streaming startup
+    task_loop.sh    # Continuous agent task generation (customizable)
+    stream_dual.sh  # RTMP dual-stream to YouTube + Twitch
+    setup_desktop.sh# VNC desktop layout (terminal + browser split)
+    watchdog.sh     # Process monitor with auto-restart
   public/
     demo.jsonl      # Sample transcript for ?demo
 ```
