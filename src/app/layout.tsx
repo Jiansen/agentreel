@@ -13,12 +13,14 @@ export const metadata: Metadata = {
     "JSONL viewer",
     "agent session replay",
   ],
+  metadataBase: new URL("https://reels.agent-status.com"),
   openGraph: {
     title: "AgentReel — See Your Agent's Work, Beautifully",
     description:
       "Drag & drop OpenClaw transcripts. Instant timeline replay. One-click sharing.",
     type: "website",
     siteName: "AgentReel",
+    url: "https://reels.agent-status.com",
   },
   twitter: {
     card: "summary_large_image",
