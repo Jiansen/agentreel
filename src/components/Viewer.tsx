@@ -32,6 +32,7 @@ export default function Viewer({ session, jsonlContent, onReset }: ViewerProps) 
     () => new Set(ALL_VISIBLE_TYPES)
   );
   const [searchQuery, setSearchQuery] = useState("");
+  const [showMobileSummary, setShowMobileSummary] = useState(false);
   const timelineRef = useRef<HTMLDivElement>(null);
 
   const filteredEvents = useMemo(() => {
@@ -138,6 +139,12 @@ export default function Viewer({ session, jsonlContent, onReset }: ViewerProps) 
             title={session.summary.title}
           />
           <button
+            onClick={() => setShowMobileSummary(!showMobileSummary)}
+            className="lg:hidden px-3 py-1.5 rounded-lg bg-[var(--bg-tertiary)] text-[var(--text-secondary)] text-sm hover:bg-[var(--bg-hover)] transition-colors"
+          >
+            {showMobileSummary ? "Timeline" : "Summary"}
+          </button>
+          <button
             onClick={onReset}
             className="px-3 py-1.5 rounded-lg bg-[var(--bg-tertiary)] text-[var(--text-secondary)] text-sm hover:bg-[var(--bg-hover)] transition-colors"
           >
@@ -158,10 +165,17 @@ export default function Viewer({ session, jsonlContent, onReset }: ViewerProps) 
 
       {/* Main content area */}
       <div className="flex-1 flex overflow-hidden">
+        {/* Mobile summary overlay */}
+        {showMobileSummary && (
+          <div className="lg:hidden w-full overflow-y-auto p-4">
+            <SummaryPanel summary={session.summary} />
+          </div>
+        )}
+
         {/* Timeline (left) */}
         <div
           ref={timelineRef}
-          className="w-full lg:w-3/5 xl:w-2/3 overflow-y-auto p-4 space-y-1"
+          className={`${showMobileSummary ? "hidden" : ""} w-full lg:w-3/5 xl:w-2/3 overflow-y-auto p-4 space-y-1`}
         >
           {filteredEvents.map((event, i) => (
             <div key={event.seq} id={`event-${i}`}>

@@ -204,6 +204,11 @@ function getEventPreview(event: TimelineEvent): string {
       if (!params) return "";
       const keys = Object.keys(params);
       if (keys.length === 0) return "";
+      if (keys.length === 1) {
+        const v = params[keys[0]];
+        const vs = typeof v === "string" ? v : JSON.stringify(v);
+        return `${keys[0]}: ${truncate(vs ?? "", 120)}`;
+      }
       return keys
         .slice(0, 3)
         .map((k) => {
