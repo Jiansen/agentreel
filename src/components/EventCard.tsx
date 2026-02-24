@@ -118,9 +118,10 @@ export default function EventCard({
         transition-all duration-200
         ${
           isActive
-            ? "bg-[var(--bg-tertiary)] border border-[var(--border)]"
+            ? "bg-[var(--bg-tertiary)] border border-[var(--border)] shadow-lg"
             : "hover:bg-[var(--bg-hover)]"
         }
+        ${event.type === "error" ? "border-l-2 border-l-[var(--accent-red)]" : ""}
       `}
     >
       {/* Dot + connector */}

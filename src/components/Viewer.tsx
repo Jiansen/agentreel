@@ -76,6 +76,35 @@ export default function Viewer({ session, jsonlContent, onReset }: ViewerProps) 
     }
   }, [activeIndex]);
 
+  // Keyboard navigation
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      switch (e.key) {
+        case "ArrowDown":
+        case "j":
+          e.preventDefault();
+          handleSeek(activeIndex + 1);
+          break;
+        case "ArrowUp":
+        case "k":
+          e.preventDefault();
+          handleSeek(activeIndex - 1);
+          break;
+        case "Home":
+          e.preventDefault();
+          handleSeek(0);
+          break;
+        case "End":
+          e.preventDefault();
+          handleSeek(filteredEvents.length - 1);
+          break;
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [activeIndex, filteredEvents.length, handleSeek]);
+
   const activeEvent: TimelineEvent | undefined = filteredEvents[activeIndex];
 
   return (
