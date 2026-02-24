@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import type { ParsedSession, EventType, TimelineEvent } from "@/types/timeline";
 import EventCard from "./EventCard";
 import SummaryPanel from "./SummaryPanel";
@@ -177,16 +177,24 @@ export default function Viewer({ session, jsonlContent, onReset }: ViewerProps) 
           ref={timelineRef}
           className={`${showMobileSummary ? "hidden" : ""} w-full lg:w-3/5 xl:w-2/3 overflow-y-auto p-4 space-y-1`}
         >
-          {filteredEvents.map((event, i) => (
-            <div key={event.seq} id={`event-${i}`}>
-              <EventCard
-                event={event}
-                isActive={i === activeIndex}
-                onClick={() => setActiveIndex(i)}
-                index={i}
-              />
-            </div>
-          ))}
+          <AnimatePresence mode="popLayout">
+            {filteredEvents.map((event, i) => (
+              <motion.div
+                key={event.seq}
+                id={`event-${i}`}
+                layout
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.15 }}
+              >
+                <EventCard
+                  event={event}
+                  isActive={i === activeIndex}
+                  onClick={() => setActiveIndex(i)}
+                  index={i}
+                />
+              </motion.div>
+            ))}
+          </AnimatePresence>
 
           {filteredEvents.length === 0 && (
             <div className="flex flex-col items-center justify-center h-64 text-[var(--text-muted)]">

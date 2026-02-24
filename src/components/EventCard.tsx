@@ -109,17 +109,18 @@ export default function EventCard({
 
   return (
     <motion.div
+      layout
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.2, delay: Math.min(index * 0.02, 0.5) }}
+      transition={{ duration: 0.2, delay: Math.min(index * 0.02, 0.5), layout: { duration: 0.2 } }}
       onClick={onClick}
       className={`
         relative flex items-start gap-3 p-3 rounded-xl cursor-pointer
-        transition-all duration-200
+        transition-colors duration-200
         ${
           isActive
-            ? "bg-[var(--bg-tertiary)] border border-[var(--border)] shadow-lg"
-            : "hover:bg-[var(--bg-hover)]"
+            ? "bg-[var(--bg-tertiary)] border border-[var(--border)] shadow-lg shadow-[var(--accent-blue)]/5"
+            : "hover:bg-[var(--bg-hover)] border border-transparent"
         }
         ${event.type === "error" ? "border-l-2 border-l-[var(--accent-red)]" : ""}
       `}
@@ -168,8 +169,10 @@ export default function EventCard({
         {/* Expanded details when active */}
         {isActive && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
             className="mt-3"
           >
             <EventDetail event={event} />

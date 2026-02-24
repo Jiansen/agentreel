@@ -21,6 +21,14 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "AgentReel",
     url: "https://reels.agent-status.com",
+    images: [
+      {
+        url: "/api/og?title=Beautiful+Replay+Viewer+for+AI+Agent+Sessions",
+        width: 1200,
+        height: 630,
+        alt: "AgentReel — AI Agent Session Replay",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
