@@ -19,10 +19,13 @@ import argparse
 import glob
 import json
 import os
+import re
 import sys
 import time
+import uuid
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
 from threading import Lock, Thread
 
 
@@ -87,7 +90,113 @@ class SessionWatcher:
         }
 
 
+MAX_TRANSCRIPT_BYTES = 10 * 1024 * 1024  # 10 MB
+MAX_TRANSCRIPTS = 200
+RATE_LIMIT_WINDOW = 60  # seconds
+RATE_LIMIT_MAX = 10  # uploads per window
+
+TRANSCRIPT_DIR = Path(os.environ.get(
+    "TRANSCRIPT_DIR", os.path.expanduser("~/transcripts")
+))
+VIEWER_BASE = os.environ.get(
+    "VIEWER_BASE", "https://reels.agent-status.com"
+)
+
+
+class RateLimiter:
+    """Simple in-memory sliding-window rate limiter per IP."""
+
+    def __init__(self, window: int = RATE_LIMIT_WINDOW, limit: int = RATE_LIMIT_MAX):
+        self.window = window
+        self.limit = limit
+        self.lock = Lock()
+        self.hits: dict[str, list[float]] = {}
+
+    def allow(self, ip: str) -> bool:
+        now = time.time()
+        with self.lock:
+            timestamps = self.hits.get(ip, [])
+            timestamps = [t for t in timestamps if now - t < self.window]
+            if len(timestamps) >= self.limit:
+                self.hits[ip] = timestamps
+                return False
+            timestamps.append(now)
+            self.hits[ip] = timestamps
+            return True
+
+
+class TranscriptStore:
+    """Manages uploaded transcript JSONL files on disk."""
+
+    def __init__(self, directory: Path):
+        self.directory = directory
+        self.directory.mkdir(parents=True, exist_ok=True)
+        self.lock = Lock()
+
+    def save(self, body: bytes) -> dict:
+        tid = uuid.uuid4().hex[:12]
+        path = self.directory / f"{tid}.jsonl"
+        event_count = 0
+        for line in body.decode("utf-8", errors="replace").split("\n"):
+            stripped = line.strip()
+            if stripped:
+                try:
+                    json.loads(stripped)
+                    event_count += 1
+                except json.JSONDecodeError:
+                    pass
+        if event_count == 0:
+            raise ValueError("No valid JSONL lines found")
+
+        with open(path, "wb") as f:
+            f.write(body)
+
+        self._evict_old()
+
+        return {
+            "id": tid,
+            "events": event_count,
+            "bytes": len(body),
+            "viewUrl": f"{VIEWER_BASE}/?url={self._public_url(tid)}",
+        }
+
+    def list_all(self) -> list[dict]:
+        result = []
+        for p in sorted(self.directory.glob("*.jsonl"), key=os.path.getmtime, reverse=True):
+            tid = p.stem
+            stat = p.stat()
+            result.append({
+                "id": tid,
+                "bytes": stat.st_size,
+                "created": datetime.fromtimestamp(
+                    stat.st_mtime, tz=timezone.utc
+                ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            })
+        return result
+
+    def get(self, tid: str) -> bytes | None:
+        if not re.match(r"^[a-f0-9]{12}$", tid):
+            return None
+        path = self.directory / f"{tid}.jsonl"
+        if not path.exists():
+            return None
+        return path.read_bytes()
+
+    def _evict_old(self):
+        files = sorted(self.directory.glob("*.jsonl"), key=os.path.getmtime)
+        while len(files) > MAX_TRANSCRIPTS:
+            oldest = files.pop(0)
+            oldest.unlink(missing_ok=True)
+
+    def _public_url(self, tid: str) -> str:
+        port = os.environ.get("RELAY_PORT", "8765")
+        host = os.environ.get("RELAY_HOST", "localhost")
+        return f"http://{host}:{port}/api/transcripts/{tid}"
+
+
 watcher = SessionWatcher()
+transcript_store = TranscriptStore(TRANSCRIPT_DIR)
+upload_limiter = RateLimiter()
 sse_clients: list = []
 sse_lock = Lock()
 
@@ -107,17 +216,80 @@ class RelayHandler(BaseHTTPRequestHandler):
         elif self.path == "/api/stream":
             self._handle_sse()
 
-        else:
-            self.send_error(404, "Not found. Use /api/stream, /api/events, or /api/status")
+        elif self.path == "/api/transcripts":
+            self._json_response({
+                "transcripts": transcript_store.list_all(),
+            })
 
-    def _json_response(self, data: dict):
-        body = json.dumps(data).encode("utf-8")
-        self.send_response(200)
+        elif self.path.startswith("/api/transcripts/"):
+            tid = self.path.split("/")[-1]
+            data = transcript_store.get(tid)
+            if data is None:
+                self.send_error(404, "Transcript not found")
+            else:
+                self._raw_response(data, "application/x-ndjson")
+
+        else:
+            self.send_error(
+                404,
+                "Not found. Endpoints: /api/stream, /api/events, "
+                "/api/status, /api/transcript, /api/transcripts",
+            )
+
+    def do_POST(self):
+        if self.path == "/api/transcript":
+            self._handle_transcript_upload()
+        else:
+            self.send_error(404, "POST only accepted at /api/transcript")
+
+    def _handle_transcript_upload(self):
+        client_ip = self.client_address[0]
+        if not upload_limiter.allow(client_ip):
+            self._json_error(429, "Rate limit exceeded. Try again later.")
+            return
+
+        length = int(self.headers.get("Content-Length", 0))
+        if length <= 0:
+            self._json_error(400, "Empty body")
+            return
+        if length > MAX_TRANSCRIPT_BYTES:
+            self._json_error(413, f"Body too large (max {MAX_TRANSCRIPT_BYTES} bytes)")
+            return
+
+        body = self.rfile.read(length)
+        try:
+            result = transcript_store.save(body)
+        except ValueError as e:
+            self._json_error(400, str(e))
+            return
+
+        self._json_response(result, status=201)
+
+    def _json_error(self, status: int, message: str):
+        body = json.dumps({"error": message}).encode("utf-8")
+        self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+
+    def _json_response(self, data: dict, status: int = 200):
+        body = json.dumps(data).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _raw_response(self, data: bytes, content_type: str):
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
 
     def _handle_sse(self):
         self.send_response(200)
@@ -154,7 +326,7 @@ class RelayHandler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         self.send_response(200)
         self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "*")
         self.end_headers()
 
@@ -213,6 +385,8 @@ def main():
     server = HTTPServer(("0.0.0.0", args.port), RelayHandler)
     print(f"[relay] SSE server on http://0.0.0.0:{args.port}")
     print("[relay] Endpoints: /api/stream (SSE), /api/events (JSON), /api/status, /health")
+    print(f"[relay] Transcript upload: POST /api/transcript  |  GET /api/transcripts")
+    print(f"[relay] Transcript store: {TRANSCRIPT_DIR}")
 
     try:
         server.serve_forever()

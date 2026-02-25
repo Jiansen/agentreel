@@ -26,7 +26,7 @@ export default function Home() {
     }
   }, []);
 
-  // Check URL hash for shared data or ?demo on mount
+  // Check URL hash for shared data, ?url= for remote JSONL, or ?demo on mount
   useEffect(() => {
     const hash = window.location.hash;
     if (hash.startsWith("#d=")) {
@@ -37,7 +37,23 @@ export default function Home() {
         return;
       }
     }
+
     const params = new URLSearchParams(window.location.search);
+
+    const remoteUrl = params.get("url");
+    if (remoteUrl) {
+      fetch(remoteUrl)
+        .then((r) => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return r.text();
+        })
+        .then((content) => loadContent(content, remoteUrl))
+        .catch((e) => {
+          setError(`Failed to load from URL: ${e instanceof Error ? e.message : "unknown error"}`);
+        });
+      return;
+    }
+
     if (params.has("demo")) {
       fetch("/demo.jsonl")
         .then((r) => r.text())
