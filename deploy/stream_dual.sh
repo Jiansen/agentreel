@@ -22,6 +22,8 @@ RESOLUTION="${RESOLUTION:-1920x1080}"
 FPS="${FPS:-30}"
 BITRATE="${BITRATE:-2500k}"
 RESTART_DELAY="${RESTART_DELAY:-10}"
+RECORD_LOCAL="${RECORD_LOCAL:-false}"
+RECORDINGS_DIR="${RECORDINGS_DIR:-$HOME/recordings}"
 
 log() { echo "[stream] $(date +"%Y-%m-%dT%H:%M:%SZ") $*"; }
 
@@ -53,6 +55,14 @@ build_tee_output() {
 run_stream() {
   local tee_output
   tee_output=$(build_tee_output)
+
+  if [[ "$RECORD_LOCAL" == "true" ]]; then
+    mkdir -p "$RECORDINGS_DIR"
+    local segment_file="${RECORDINGS_DIR}/stream-$(date +"%Y%m%d-%H%M%S").mp4"
+    tee_output="${tee_output}|[f=mp4]${segment_file}"
+    log "Local recording enabled: ${segment_file}"
+  fi
+
   log "Starting ffmpeg (${RESOLUTION} @ ${FPS}fps, ${BITRATE})"
 
   ffmpeg \

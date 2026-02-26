@@ -59,11 +59,17 @@ echo "[5/7] Installing Firefox + wmctrl..."
 apt-get install -y firefox wmctrl
 
 # --- Recording + streaming tools ---
-echo "[6/7] Installing ffmpeg and tools..."
+echo "[6/8] Installing ffmpeg and tools..."
 apt-get install -y ffmpeg git curl wget unzip build-essential python3 python3-pip
 
+# --- Cua CLI (optional, for VNC protocol-level recording) ---
+echo "[7/8] Installing Cua CLI (optional)..."
+pip3 install --break-system-packages cua-cli==0.1.5 2>/dev/null \
+  && echo "  Cua CLI installed: $(cua --version 2>/dev/null || echo 'v0.1.5')" \
+  || echo "  Cua CLI install skipped (optional, install manually: pip install cua-cli==0.1.5)"
+
 # --- Docker (optional) ---
-echo "[7/7] Installing Docker..."
+echo "[8/8] Installing Docker..."
 apt-get install -y ca-certificates gnupg
 install -m 0755 -d /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
@@ -99,6 +105,7 @@ echo "  Node.js:  $(node --version 2>/dev/null)"
 echo "  OpenClaw: $(openclaw --version 2>/dev/null)"
 echo "  Docker:   $(docker --version 2>/dev/null)"
 echo "  ffmpeg:   $(ffmpeg -version 2>/dev/null | head -1)"
+echo "  Cua CLI:  $(cua --version 2>/dev/null || echo 'not installed (optional)')"
 echo "  Firefox:  $(firefox --version 2>/dev/null)"
 echo ""
 echo "Next steps:"

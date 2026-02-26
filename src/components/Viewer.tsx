@@ -7,7 +7,9 @@ import EventCard from "./EventCard";
 import SummaryPanel from "./SummaryPanel";
 import FilterBar from "./FilterBar";
 import PlaybackControls from "./PlaybackControls";
+import type { ViewMode } from "./PlaybackControls";
 import ShareButton from "./ShareButton";
+import TerminalReplay from "./TerminalReplay";
 
 interface ViewerProps {
   session: ParsedSession;
@@ -33,6 +35,7 @@ export default function Viewer({ session, jsonlContent, onReset }: ViewerProps) 
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [showMobileSummary, setShowMobileSummary] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
   const timelineRef = useRef<HTMLDivElement>(null);
 
   const filteredEvents = useMemo(() => {
@@ -172,39 +175,50 @@ export default function Viewer({ session, jsonlContent, onReset }: ViewerProps) 
           </div>
         )}
 
-        {/* Timeline (left) */}
-        <div
-          ref={timelineRef}
-          className={`${showMobileSummary ? "hidden" : ""} w-full lg:w-3/5 xl:w-2/3 overflow-y-auto p-4 space-y-1`}
-        >
-          <AnimatePresence mode="popLayout">
-            {filteredEvents.map((event, i) => (
-              <motion.div
-                key={event.seq}
-                id={`event-${i}`}
-                layout
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.15 }}
-              >
-                <EventCard
-                  event={event}
-                  isActive={i === activeIndex}
-                  onClick={() => setActiveIndex(i)}
-                  index={i}
-                />
-              </motion.div>
-            ))}
-          </AnimatePresence>
+        {viewMode === "replay" ? (
+          /* Terminal Replay mode */
+          <div className={`${showMobileSummary ? "hidden" : ""} w-full lg:w-3/5 xl:w-2/3`}>
+            <TerminalReplay
+              events={filteredEvents}
+              activeIndex={activeIndex}
+              onSeek={handleSeek}
+            />
+          </div>
+        ) : (
+          /* List mode (original) */
+          <div
+            ref={timelineRef}
+            className={`${showMobileSummary ? "hidden" : ""} w-full lg:w-3/5 xl:w-2/3 overflow-y-auto p-4 space-y-1`}
+          >
+            <AnimatePresence mode="popLayout">
+              {filteredEvents.map((event, i) => (
+                <motion.div
+                  key={event.seq}
+                  id={`event-${i}`}
+                  layout
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  <EventCard
+                    event={event}
+                    isActive={i === activeIndex}
+                    onClick={() => setActiveIndex(i)}
+                    index={i}
+                  />
+                </motion.div>
+              ))}
+            </AnimatePresence>
 
-          {filteredEvents.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-64 text-[var(--text-muted)]">
-              <span className="text-2xl mb-2">🔍</span>
-              <p>No events match your filters</p>
-            </div>
-          )}
-        </div>
+            {filteredEvents.length === 0 && (
+              <div className="flex flex-col items-center justify-center h-64 text-[var(--text-muted)]">
+                <span className="text-2xl mb-2">🔍</span>
+                <p>No events match your filters</p>
+              </div>
+            )}
+          </div>
+        )}
 
-        {/* Summary panel (right) */}
+        {/* Summary panel (right) — visible in both modes */}
         <div className="hidden lg:block w-2/5 xl:w-1/3 border-l border-[var(--border)] overflow-y-auto p-4">
           <SummaryPanel summary={session.summary} />
 
@@ -238,7 +252,7 @@ export default function Viewer({ session, jsonlContent, onReset }: ViewerProps) 
             </div>
           )}
 
-          {/* Active event detail (for context) */}
+          {/* Active event detail */}
           {activeEvent && (
             <div className="mt-5 pt-5 border-t border-[var(--border)]">
               <h3 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-2">
@@ -258,6 +272,8 @@ export default function Viewer({ session, jsonlContent, onReset }: ViewerProps) 
         events={filteredEvents}
         activeIndex={activeIndex}
         onSeek={handleSeek}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
       />
     </div>
   );

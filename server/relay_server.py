@@ -165,13 +165,24 @@ class TranscriptStore:
         for p in sorted(self.directory.glob("*.jsonl"), key=os.path.getmtime, reverse=True):
             tid = p.stem
             stat = p.stat()
-            result.append({
+            meta_path = self.directory / f"{tid}.meta.json"
+            video_url = None
+            if meta_path.exists():
+                try:
+                    meta = json.loads(meta_path.read_text())
+                    video_url = meta.get("videoUrl")
+                except json.JSONDecodeError:
+                    pass
+            entry: dict = {
                 "id": tid,
                 "bytes": stat.st_size,
                 "created": datetime.fromtimestamp(
                     stat.st_mtime, tz=timezone.utc
                 ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            })
+            }
+            if video_url:
+                entry["videoUrl"] = video_url
+            result.append(entry)
         return result
 
     def get(self, tid: str) -> bytes | None:
@@ -181,6 +192,48 @@ class TranscriptStore:
         if not path.exists():
             return None
         return path.read_bytes()
+
+    def get_meta(self, tid: str) -> dict | None:
+        if not re.match(r"^[a-f0-9]{12}$", tid):
+            return None
+        path = self.directory / f"{tid}.jsonl"
+        if not path.exists():
+            return None
+        meta_path = self.directory / f"{tid}.meta.json"
+        meta = {}
+        if meta_path.exists():
+            try:
+                meta = json.loads(meta_path.read_text())
+            except json.JSONDecodeError:
+                pass
+        stat = path.stat()
+        return {
+            "id": tid,
+            "bytes": stat.st_size,
+            "created": datetime.fromtimestamp(
+                stat.st_mtime, tz=timezone.utc
+            ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "videoUrl": meta.get("videoUrl"),
+            "viewUrl": f"{VIEWER_BASE}/?url={self._public_url(tid)}",
+        }
+
+    def set_video_url(self, tid: str, video_url: str) -> dict | None:
+        if not re.match(r"^[a-f0-9]{12}$", tid):
+            return None
+        path = self.directory / f"{tid}.jsonl"
+        if not path.exists():
+            return None
+        meta_path = self.directory / f"{tid}.meta.json"
+        meta = {}
+        if meta_path.exists():
+            try:
+                meta = json.loads(meta_path.read_text())
+            except json.JSONDecodeError:
+                pass
+        meta["videoUrl"] = video_url
+        meta["updatedAt"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        meta_path.write_text(json.dumps(meta))
+        return self.get_meta(tid)
 
     def _evict_old(self):
         files = sorted(self.directory.glob("*.jsonl"), key=os.path.getmtime)
@@ -222,12 +275,22 @@ class RelayHandler(BaseHTTPRequestHandler):
             })
 
         elif self.path.startswith("/api/transcripts/"):
-            tid = self.path.split("/")[-1]
-            data = transcript_store.get(tid)
-            if data is None:
-                self.send_error(404, "Transcript not found")
+            parts = self.path.rstrip("/").split("/")
+            tid = parts[3] if len(parts) > 3 else ""
+            suffix = parts[4] if len(parts) > 4 else None
+
+            if suffix == "meta":
+                meta = transcript_store.get_meta(tid)
+                if meta is None:
+                    self.send_error(404, "Transcript not found")
+                else:
+                    self._json_response(meta)
             else:
-                self._raw_response(data, "application/x-ndjson")
+                data = transcript_store.get(tid)
+                if data is None:
+                    self.send_error(404, "Transcript not found")
+                else:
+                    self._raw_response(data, "application/x-ndjson")
 
         else:
             self.send_error(
@@ -239,8 +302,33 @@ class RelayHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         if self.path == "/api/transcript":
             self._handle_transcript_upload()
+        elif self.path.startswith("/api/transcripts/") and self.path.rstrip("/").endswith("/video"):
+            self._handle_video_link()
         else:
-            self.send_error(404, "POST only accepted at /api/transcript")
+            self.send_error(404, "POST accepted at /api/transcript or /api/transcripts/{id}/video")
+
+    def _handle_video_link(self):
+        parts = self.path.rstrip("/").split("/")
+        tid = parts[3] if len(parts) > 4 else ""
+        length = int(self.headers.get("Content-Length", 0))
+        if length <= 0 or length > 4096:
+            self._json_error(400, "Invalid body")
+            return
+        body = self.rfile.read(length)
+        try:
+            payload = json.loads(body)
+        except json.JSONDecodeError:
+            self._json_error(400, "Invalid JSON")
+            return
+        video_url = payload.get("videoUrl", "").strip()
+        if not video_url:
+            self._json_error(400, "videoUrl is required")
+            return
+        result = transcript_store.set_video_url(tid, video_url)
+        if result is None:
+            self._json_error(404, "Transcript not found")
+        else:
+            self._json_response(result)
 
     def _handle_transcript_upload(self):
         client_ip = self.client_address[0]

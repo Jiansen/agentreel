@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import DropZone from "@/components/DropZone";
 import Viewer from "@/components/Viewer";
+import SideBySideViewer from "@/components/SideBySideViewer";
 import { parseOpenClawJsonl } from "@/lib/parsers/openclaw";
 import { decompressFromUrl } from "@/lib/share";
 import type { ParsedSession } from "@/types/timeline";
@@ -10,6 +11,7 @@ import type { ParsedSession } from "@/types/timeline";
 export default function Home() {
   const [session, setSession] = useState<ParsedSession | null>(null);
   const [jsonlContent, setJsonlContent] = useState<string>("");
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const loadContent = useCallback((content: string, source: string) => {
@@ -39,6 +41,9 @@ export default function Home() {
     }
 
     const params = new URLSearchParams(window.location.search);
+
+    const video = params.get("video");
+    if (video) setVideoUrl(video);
 
     const remoteUrl = params.get("url");
     if (remoteUrl) {
@@ -72,9 +77,9 @@ export default function Home() {
   const handleReset = useCallback(() => {
     setSession(null);
     setJsonlContent("");
+    setVideoUrl(null);
     setError(null);
-    // Clear URL hash
-    if (window.location.hash) {
+    if (window.location.hash || window.location.search) {
       window.history.replaceState(null, "", window.location.pathname);
     }
   }, []);
@@ -94,6 +99,17 @@ export default function Home() {
           </button>
         </div>
       </div>
+    );
+  }
+
+  if (session && videoUrl) {
+    return (
+      <SideBySideViewer
+        session={session}
+        jsonlContent={jsonlContent}
+        videoUrl={videoUrl}
+        onReset={handleReset}
+      />
     );
   }
 

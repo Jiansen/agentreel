@@ -1,0 +1,4 @@
+# Optional: Cua CLI for VNC protocol-level recording
+# Install with: pip install -r requirements.txt
+# Only needed if using --backend cua in record_session.sh
+cua-cli==0.1.5
