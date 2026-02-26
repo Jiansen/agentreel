@@ -10,6 +10,7 @@ import PlaybackControls from "./PlaybackControls";
 import type { ViewMode } from "./PlaybackControls";
 import ShareButton from "./ShareButton";
 import TerminalReplay from "./TerminalReplay";
+import ReportPanel from "./ReportPanel";
 
 interface ViewerProps {
   session: ParsedSession;
@@ -175,7 +176,12 @@ export default function Viewer({ session, jsonlContent, onReset }: ViewerProps) 
           </div>
         )}
 
-        {viewMode === "replay" ? (
+        {viewMode === "report" ? (
+          /* Report mode */
+          <div className={`${showMobileSummary ? "hidden" : ""} w-full lg:w-3/5 xl:w-2/3 flex`}>
+            <ReportPanel summary={session.summary} />
+          </div>
+        ) : viewMode === "replay" ? (
           /* Terminal Replay mode */
           <div className={`${showMobileSummary ? "hidden" : ""} w-full lg:w-3/5 xl:w-2/3`}>
             <TerminalReplay

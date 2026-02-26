@@ -41,6 +41,8 @@ export interface SessionSummary {
   model?: string;
   totalTokens?: number;
   totalCostUsd?: number;
+  /** Final agent deliverable — last substantial assistant message */
+  report?: string;
 }
 
 export interface ParsedSession {

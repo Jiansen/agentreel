@@ -569,6 +569,12 @@ function buildSummaryFromEvents(
   const title =
     titleText.length > 80 ? titleText.slice(0, 77) + "..." : titleText;
 
+  const agentMessages = events.filter((e) => e.type === "message.agent");
+  const report = agentMessages
+    .reverse()
+    .find((e) => ((e.data.content as string) ?? "").length > 200);
+  const reportText = report ? (report.data.content as string) : undefined;
+
   return {
     title,
     startedAt: startTime,
@@ -580,5 +586,6 @@ function buildSummaryFromEvents(
     model: meta.model,
     totalTokens: meta.totalTokens || undefined,
     totalCostUsd: meta.totalCostUsd || undefined,
+    report: reportText,
   };
 }

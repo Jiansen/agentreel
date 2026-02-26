@@ -14,10 +14,11 @@ interface VideoPlayerProps {
   onTimeUpdate?: (currentTime: number) => void;
   onPlay?: () => void;
   onPause?: () => void;
+  onEnded?: () => void;
 }
 
 const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
-  function VideoPlayer({ src, onTimeUpdate, onPlay, onPause }, ref) {
+  function VideoPlayer({ src, onTimeUpdate, onPlay, onPause, onEnded }, ref) {
     const videoRef = useRef<HTMLVideoElement>(null);
 
     useImperativeHandle(ref, () => ({
@@ -77,6 +78,7 @@ const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
           className="max-w-full max-h-full"
           onPlay={onPlay}
           onPause={onPause}
+          onEnded={onEnded}
         >
           <track kind="captions" />
         </video>

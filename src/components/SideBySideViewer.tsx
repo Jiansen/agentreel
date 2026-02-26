@@ -9,6 +9,7 @@ import FilterBar from "./FilterBar";
 import ShareButton from "./ShareButton";
 import VideoPlayer from "./VideoPlayer";
 import type { VideoPlayerHandle } from "./VideoPlayer";
+import ReportPanel from "./ReportPanel";
 
 const ALL_VISIBLE_TYPES: EventType[] = [
   "message.user",
@@ -39,8 +40,15 @@ export default function SideBySideViewer({
     () => new Set(ALL_VISIBLE_TYPES)
   );
   const [searchQuery, setSearchQuery] = useState("");
+  const [rightTab, setRightTab] = useState<"timeline" | "report">("timeline");
   const videoRef = useRef<VideoPlayerHandle>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
+
+  const hasReport = !!session.summary.report;
+
+  const handleVideoEnded = useCallback(() => {
+    if (hasReport) setRightTab("report");
+  }, [hasReport]);
 
   const sessionStartMs = useMemo(() => {
     if (session.events.length === 0) return 0;
@@ -190,54 +198,85 @@ export default function SideBySideViewer({
             ref={videoRef}
             src={videoUrl}
             onTimeUpdate={handleVideoTimeUpdate}
+            onEnded={handleVideoEnded}
           />
         </div>
 
-        {/* Right: Timeline */}
+        {/* Right: Tab panel */}
         <div className="w-1/2 flex flex-col">
-          <div
-            ref={timelineRef}
-            className="flex-1 overflow-y-auto p-3 space-y-1"
-          >
-            <AnimatePresence mode="popLayout">
-              {filteredEvents.map((event, i) => (
-                <motion.div
-                  key={event.seq}
-                  id={`sbs-event-${i}`}
-                  layout
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ duration: 0.15 }}
-                >
-                  <EventCard
-                    event={event}
-                    isActive={i === activeIndex}
-                    onClick={() => handleSeek(i)}
-                    index={i}
-                  />
-                </motion.div>
-              ))}
-            </AnimatePresence>
+          {/* Tab bar */}
+          <div className="flex items-center gap-1 px-3 py-2 bg-[var(--bg-secondary)] border-b border-[var(--border)]">
+            <button
+              onClick={() => setRightTab("timeline")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                rightTab === "timeline"
+                  ? "bg-[var(--bg-tertiary)] text-[var(--text-primary)]"
+                  : "text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"
+              }`}
+            >
+              Timeline
+            </button>
+            <button
+              onClick={() => setRightTab("report")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                rightTab === "report"
+                  ? "bg-[var(--bg-tertiary)] text-[var(--text-primary)]"
+                  : "text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"
+              }`}
+            >
+              Report
+              {hasReport && (
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-green)]" />
+              )}
+            </button>
           </div>
 
-          {/* Mini summary */}
-          <div className="border-t border-[var(--border)] p-3 bg-[var(--bg-secondary)]">
-            <div className="flex items-center gap-4 text-xs text-[var(--text-muted)]">
-              <span>
-                {filteredEvents.length} events
-              </span>
-              <span>
-                {session.summary.toolCalls.length} tool types
-              </span>
-              {session.summary.errorCount > 0 && (
-                <span className="text-[var(--accent-red)]">
-                  {session.summary.errorCount} errors
-                </span>
-              )}
-              {session.summary.model && (
-                <span>{session.summary.model}</span>
-              )}
-            </div>
-          </div>
+          {/* Tab content */}
+          {rightTab === "timeline" ? (
+            <>
+              <div
+                ref={timelineRef}
+                className="flex-1 overflow-y-auto p-3 space-y-1"
+              >
+                <AnimatePresence mode="popLayout">
+                  {filteredEvents.map((event, i) => (
+                    <motion.div
+                      key={event.seq}
+                      id={`sbs-event-${i}`}
+                      layout
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 0.15 }}
+                    >
+                      <EventCard
+                        event={event}
+                        isActive={i === activeIndex}
+                        onClick={() => handleSeek(i)}
+                        index={i}
+                      />
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+
+              {/* Mini summary */}
+              <div className="border-t border-[var(--border)] p-3 bg-[var(--bg-secondary)]">
+                <div className="flex items-center gap-4 text-xs text-[var(--text-muted)]">
+                  <span>{filteredEvents.length} events</span>
+                  <span>{session.summary.toolCalls.length} tool types</span>
+                  {session.summary.errorCount > 0 && (
+                    <span className="text-[var(--accent-red)]">
+                      {session.summary.errorCount} errors
+                    </span>
+                  )}
+                  {session.summary.model && (
+                    <span>{session.summary.model}</span>
+                  )}
+                </div>
+              </div>
+            </>
+          ) : (
+            <ReportPanel summary={session.summary} />
+          )}
         </div>
       </div>
     </div>

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import type { TimelineEvent } from "@/types/timeline";
 
-export type ViewMode = "list" | "replay";
+export type ViewMode = "list" | "replay" | "report";
 
 interface PlaybackControlsProps {
   events: TimelineEvent[];
@@ -160,23 +160,24 @@ export default function PlaybackControls({
 
       {/* View mode toggle */}
       {onViewModeChange && (
-        <button
-          onClick={() =>
-            onViewModeChange(viewMode === "list" ? "replay" : "list")
-          }
-          className={`text-xs px-2 py-1 rounded transition-colors shrink-0 ${
-            viewMode === "replay"
-              ? "bg-[var(--accent-blue)]/20 text-[var(--accent-blue)]"
-              : "bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-          }`}
-          title={
-            viewMode === "list"
-              ? "Switch to replay mode"
-              : "Switch to list mode"
-          }
-        >
-          {viewMode === "replay" ? "Replay" : "List"}
-        </button>
+        <div className="flex items-center gap-1 shrink-0">
+          {(["list", "replay", "report"] as ViewMode[]).map((mode) => (
+            <button
+              key={mode}
+              onClick={() => onViewModeChange(mode)}
+              className={`text-xs px-2 py-1 rounded transition-colors ${
+                viewMode === mode
+                  ? mode === "report"
+                    ? "bg-[var(--accent-green)]/20 text-[var(--accent-green)]"
+                    : "bg-[var(--accent-blue)]/20 text-[var(--accent-blue)]"
+                  : "bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              }`}
+              title={`Switch to ${mode} mode`}
+            >
+              {mode === "list" ? "List" : mode === "replay" ? "Replay" : "Report"}
+            </button>
+          ))}
+        </div>
       )}
     </div>
   );
