@@ -17,7 +17,7 @@ export DISPLAY
 
 RELAY_PORT="${RELAY_PORT:-8765}"
 RELAY_HOST="${RELAY_HOST:-localhost}"
-AGENTREEL_URL="${AGENTREEL_URL:-https://reels.agent-status.com}"
+AGENTREEL_URL="${AGENTREEL_URL:-https://agentreel.agent-status.com}"
 
 log() { echo "[desktop] $(date +"%Y-%m-%dT%H:%M:%SZ") $*"; }
 log "Setting up split-screen desktop on ${DISPLAY}"

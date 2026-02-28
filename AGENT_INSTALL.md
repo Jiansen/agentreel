@@ -3,7 +3,7 @@
 This document is written for AI agents (e.g. OpenClaw) to execute directly.
 Human users: send this link to your agent instead of following these steps manually.
 
-Install page: https://reels.agent-status.com/install
+Install page: https://agentreel.agent-status.com/install
 
 ## Prerequisites
 
@@ -179,7 +179,7 @@ Command: |
    - Which step failed
    - The error message
    - The transcript viewing URL (if uploaded)
-   - Suggest: visit https://reels.agent-status.com and drag-drop the JSONL file manually
+   - Suggest: visit https://agentreel.agent-status.com and drag-drop the JSONL file manually
 
 ## Summary
 

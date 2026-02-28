@@ -26,7 +26,7 @@ python3 relay_server.py --watch-dir ~/.openclaw/agents/main/sessions/ --port 876
 
 ### Connect from AgentReel
 
-Open `https://reels.agent-status.com/live?stream=http://YOUR_SERVER:8765`
+Open `https://agentreel.agent-status.com/live?stream=http://YOUR_SERVER:8765`
 
 ### Requirements
 

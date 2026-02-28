@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   },
 };
 
-const AGENT_URL = "https://reels.agent-status.com/api/install";
+const AGENT_URL = "https://agentreel.agent-status.com/api/install";
 const GITHUB_URL = "https://github.com/Jiansen/agentreel";
 
 export default function InstallPage() {

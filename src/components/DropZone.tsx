@@ -54,17 +54,15 @@ export default function DropZone({ onFileLoaded }: DropZoneProps) {
         className="text-center mb-12"
       >
         <div className="flex items-center justify-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--accent-blue)] to-[var(--accent-purple)] flex items-center justify-center text-xl font-bold">
-            ▶
-          </div>
+          <img src="/logo.svg" alt="AgentReel" className="w-10 h-10 rounded-xl" />
           <h1 className="text-4xl font-bold tracking-tight">
             Agent<span className="text-[var(--accent-blue)]">Reel</span>
           </h1>
         </div>
         <p className="text-[var(--text-secondary)] text-lg max-w-md">
-          Beautiful replay viewer for your AI agent sessions.
+          Watch AI agents work in real-time.
           <br />
-          Drag & drop. Explore. Share.
+          Replays, highlights, and the fails nobody talks about.
         </p>
       </motion.div>
 

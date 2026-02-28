@@ -5,8 +5,8 @@
 </p>
 
 <p align="center">
-  <a href="https://reels.agent-status.com/?demo">Live Demo</a> ·
-  <a href="https://reels.agent-status.com/live">Live Mode</a> ·
+  <a href="https://agentreel.agent-status.com/?demo">Live Demo</a> ·
+  <a href="https://agentreel.agent-status.com/live">Live Mode</a> ·
   <a href="#features">Features</a> ·
   <a href="#quick-start">Quick Start</a> ·
   <a href="#live-mode">Live Streaming</a>
@@ -34,9 +34,9 @@ Currently supports **OpenClaw** transcripts (v3 + legacy). More formats coming s
 
 ### Use Online
 
-Visit **[reels.agent-status.com](https://reels.agent-status.com)** and drop your OpenClaw JSONL file.
+Visit **[agentreel.agent-status.com](https://agentreel.agent-status.com)** and drop your OpenClaw JSONL file.
 
-Try the demo: [reels.agent-status.com/?demo](https://reels.agent-status.com/?demo)
+Try the demo: [agentreel.agent-status.com/?demo](https://agentreel.agent-status.com/?demo)
 
 ### Run Locally
 
@@ -79,10 +79,10 @@ Relay endpoints:
 Open the live viewer with your relay URL:
 
 ```
-https://reels.agent-status.com/live?stream=http://YOUR_SERVER:8765
+https://agentreel.agent-status.com/live?stream=http://YOUR_SERVER:8765
 ```
 
-Or visit [/live](https://reels.agent-status.com/live) and enter the URL manually.
+Or visit [/live](https://agentreel.agent-status.com/live) and enter the URL manually.
 
 ### 3. Generate Sessions (OpenClaw example)
 

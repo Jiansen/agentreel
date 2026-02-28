@@ -99,7 +99,7 @@ TRANSCRIPT_DIR = Path(os.environ.get(
     "TRANSCRIPT_DIR", os.path.expanduser("~/transcripts")
 ))
 VIEWER_BASE = os.environ.get(
-    "VIEWER_BASE", "https://reels.agent-status.com"
+    "VIEWER_BASE", "https://agentreel.agent-status.com"
 )
 
 

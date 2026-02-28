@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3B82F6"/>
+      <stop offset="100%" style="stop-color:#8B5CF6"/>
+    </linearGradient>
+  </defs>
+  <!-- Rounded square background -->
+  <rect width="512" height="512" rx="96" fill="url(#grad)"/>
+  <!-- Play triangle -->
+  <path d="M 200 148 L 200 364 L 380 256 Z" fill="white" opacity="0.95"/>
+  <!-- Timeline bar -->
+  <rect x="120" y="390" width="272" height="8" rx="4" fill="white" opacity="0.4"/>
+  <!-- Timeline progress dot -->
+  <circle cx="280" cy="394" r="12" fill="white" opacity="0.9"/>
+</svg>

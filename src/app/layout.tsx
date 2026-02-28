@@ -13,28 +13,34 @@ export const metadata: Metadata = {
     "JSONL viewer",
     "agent session replay",
   ],
-  metadataBase: new URL("https://reels.agent-status.com"),
+  metadataBase: new URL("https://agentreel.agent-status.com"),
   openGraph: {
     title: "AgentReel — See Your Agent's Work, Beautifully",
     description:
       "Drag & drop OpenClaw transcripts. Instant timeline replay. One-click sharing.",
     type: "website",
     siteName: "AgentReel",
-    url: "https://reels.agent-status.com",
+    url: "https://agentreel.agent-status.com",
     images: [
       {
-        url: "/api/og?title=Beautiful+Replay+Viewer+for+AI+Agent+Sessions",
-        width: 1200,
-        height: 630,
+        url: "/og-image.png",
+        width: 1280,
+        height: 640,
         alt: "AgentReel — AI Agent Session Replay",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
+    site: "@agent_reel",
+    creator: "@he_jiansen",
     title: "AgentReel — Beautiful Replay Viewer for AI Agent Sessions",
     description:
-      "Drag & drop OpenClaw transcripts. Instant timeline replay. One-click sharing.",
+      "Watch AI agents work. Replays, highlights, and the fails nobody talks about.",
+  },
+  icons: {
+    icon: "/logo-512.png",
+    apple: "/logo-512.png",
   },
 };
 

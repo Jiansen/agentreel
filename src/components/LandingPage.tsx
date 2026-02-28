@@ -69,9 +69,7 @@ export default function LandingPage({ variant }: LandingPageProps) {
           className="text-center max-w-3xl"
         >
           <div className="flex items-center justify-center gap-3 mb-6">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[var(--accent-blue)] to-[var(--accent-purple)] flex items-center justify-center text-2xl font-bold">
-              ▶
-            </div>
+            <img src="/logo.svg" alt="AgentReel" className="w-12 h-12 rounded-xl" />
             <h1 className="text-5xl font-bold tracking-tight">
               Agent<span className="text-[var(--accent-blue)]">Reel</span>
             </h1>
@@ -159,6 +157,24 @@ export default function LandingPage({ variant }: LandingPageProps) {
       <footer className="text-center py-8 text-sm text-[var(--text-muted)] border-t border-[var(--border)]">
         <p>
           AgentReel — Open-source replay viewer for AI agent sessions
+          <br />
+          <a
+            href="https://x.com/agent_reel"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[var(--accent-blue)] hover:underline"
+          >
+            @agent_reel
+          </a>
+          {" · "}
+          <a
+            href="https://x.com/he_jiansen"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:underline"
+          >
+            by @he_jiansen
+          </a>
         </p>
       </footer>
     </div>

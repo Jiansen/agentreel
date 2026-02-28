@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
               color: "#6a6a82",
             }}
           >
-            reels.agent-status.com
+            agentreel.agent-status.com
           </div>
         </div>
       </div>

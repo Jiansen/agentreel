@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     type: "website",
   },
   alternates: {
-    canonical: "https://reels.agent-status.com/openclaw-replay",
+    canonical: "https://agentreel.agent-status.com/openclaw-replay",
   },
 };
 

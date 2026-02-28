@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     type: "website",
   },
   alternates: {
-    canonical: "https://reels.agent-status.com/openclaw-transcript-viewer",
+    canonical: "https://agentreel.agent-status.com/openclaw-transcript-viewer",
   },
 };
 
