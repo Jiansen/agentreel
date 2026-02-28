@@ -39,7 +39,10 @@ export const metadata: Metadata = {
       "Watch AI agents work. Replays, highlights, and the fails nobody talks about.",
   },
   icons: {
-    icon: "/logo-512.png",
+    icon: [
+      { url: "/favicon.png", sizes: "32x32", type: "image/png" },
+      { url: "/logo-512.png", sizes: "512x512", type: "image/png" },
+    ],
     apple: "/logo-512.png",
   },
 };
