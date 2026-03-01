@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Install AgentReel — Let Your Agent Do It",
@@ -91,12 +92,12 @@ npm run dev`}
           <p className="text-sm text-[var(--text-secondary)]">
             <strong>No install needed?</strong> Use AgentReel directly in your browser:
           </p>
-          <a
+          <Link
             href="/"
             className="inline-block px-5 py-2 rounded-lg bg-[var(--accent-blue)] text-white text-sm font-medium hover:bg-[var(--accent-blue)]/80 transition-colors"
           >
             Open AgentReel
-          </a>
+          </Link>
         </div>
 
         {/* Footer */}
@@ -110,9 +111,9 @@ npm run dev`}
               Raw Install Doc
             </a>
             {" · "}
-            <a href="/?demo" className="hover:underline">
+            <Link href="/?demo" className="hover:underline">
               Demo
-            </a>
+            </Link>
           </p>
           <p>MIT License</p>
         </div>

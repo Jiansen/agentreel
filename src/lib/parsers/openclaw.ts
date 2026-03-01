@@ -118,7 +118,6 @@ function parseV3(lines: V3Line[]): ParsedSession {
   const toolTimings = new Map<string, { seq: number; timestamp: string }>();
   let sessionModel: string | undefined;
   let sessionProvider: string | undefined;
-  let sessionId: string | undefined;
   let totalTokens = 0;
   let totalCostUsd = 0;
 
@@ -126,7 +125,6 @@ function parseV3(lines: V3Line[]): ParsedSession {
     const ts = tsFromV3(line);
 
     if (line.type === "session") {
-      sessionId = line.id;
       seq++;
       events.push({
         seq,

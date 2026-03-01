@@ -11,7 +11,6 @@ export default function LiveViewer() {
   const [session, setSession] = useState<ParsedSession | null>(null);
   const [rawLines, setRawLines] = useState<string[]>([]);
   const [connState, setConnState] = useState<ConnectionState>("disconnected");
-  const [streamUrl, setStreamUrl] = useState("");
   const [inputUrl, setInputUrl] = useState("");
   const [eventCount, setEventCount] = useState(0);
   const [lastUpdate, setLastUpdate] = useState<string>("");
@@ -36,7 +35,6 @@ export default function LiveViewer() {
       }
 
       setConnState("connecting");
-      setStreamUrl(url);
 
       const sseUrl = url.endsWith("/api/stream")
         ? url

@@ -2,9 +2,8 @@
 
 import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import type { ParsedSession, EventType, TimelineEvent } from "@/types/timeline";
+import type { ParsedSession, EventType } from "@/types/timeline";
 import EventCard from "./EventCard";
-import SummaryPanel from "./SummaryPanel";
 import FilterBar from "./FilterBar";
 import ShareButton from "./ShareButton";
 import VideoPlayer from "./VideoPlayer";
