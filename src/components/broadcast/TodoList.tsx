@@ -65,11 +65,20 @@ export default function TodoList({ plan, compact }: TodoListProps) {
           Completed {plan.completedCount} of {plan.totalCount}
         </span>
       </div>
-      <div className="h-1 bg-[var(--bg-tertiary)] rounded-full overflow-hidden mb-2">
+      <div className="h-1 bg-[var(--bg-tertiary)] rounded-full overflow-hidden mb-2 relative">
         <div
           className="h-full rounded-full bg-gradient-to-r from-[var(--accent-green)] to-[var(--accent-blue)] transition-[width] duration-500"
           style={{ width: `${pct}%` }}
         />
+        {plan.steps.some((s) => s.status === "active") && (
+          <div
+            className="absolute top-0 h-full w-[30%] rounded-full animate-[shimmer_2s_ease-in-out_infinite]"
+            style={{
+              background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent)",
+              left: `${pct}%`,
+            }}
+          />
+        )}
       </div>
       <div className="space-y-0.5">
         {plan.steps.map((step) => (

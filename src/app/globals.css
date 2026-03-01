@@ -114,3 +114,16 @@ body {
   75%  { top: 65%; left: 20%; }
   100% { top: 15%; left: 10%; }
 }
+
+/* Broadcast card breathing glow */
+@keyframes breathe {
+  0%, 100% { opacity: 0.6; }
+  50%      { opacity: 1; }
+}
+
+/* Progress bar shimmer for active steps */
+@keyframes shimmer {
+  0%   { transform: translateX(-100%); opacity: 0; }
+  50%  { opacity: 1; }
+  100% { transform: translateX(200%); opacity: 0; }
+}

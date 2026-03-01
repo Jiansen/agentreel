@@ -84,12 +84,13 @@ export default function StreamCards({ events, compact }: StreamCardsProps) {
       {events.map((ev, i) => {
         const style = TAG_STYLES[ev.type] ?? TAG_STYLES.browse;
         const isLatest = i === lastIdx;
+        const isPrevious = i === lastIdx - 1 && lastIdx > 0;
         return (
           <div
             key={`${i}-${ev.timestamp}`}
             className={`rounded-md p-1.5 bg-[var(--bg-tertiary)] border-l-[3px] ${style.border} ${
               isLatest ? "ring-1 ring-[var(--border)] shadow-sm" : ""
-            }`}
+            } ${isPrevious ? "animate-[breathe_4s_ease-in-out_infinite]" : ""}`}
           >
             <span className={`${tagSize} font-bold uppercase tracking-wider ${style.color} block mb-px`}>
               {style.label}
