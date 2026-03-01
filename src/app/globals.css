@@ -105,3 +105,12 @@ body {
   width: 2px;
   background: linear-gradient(to bottom, var(--border), transparent);
 }
+
+/* Broadcast watermark float */
+@keyframes wm-float {
+  0%   { top: 15%; left: 10%; }
+  25%  { top: 55%; left: 60%; }
+  50%  { top: 30%; left: 75%; }
+  75%  { top: 65%; left: 20%; }
+  100% { top: 15%; left: 10%; }
+}
