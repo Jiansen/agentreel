@@ -30,6 +30,7 @@ export default function ClassicSplit({ data, vncUrl, tabIntervalMs = 10000 }: Cl
           missionName={data.missionName}
           elapsedMs={data.elapsedMs}
           isLive={data.isLive}
+          activityStatus={data.activityStatus}
         />
         <AgentView vncUrl={vncUrl} className="flex-1" />
         <div className="h-[132px] shrink-0">

@@ -1,10 +1,26 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import type { BroadcastPlan } from "@/types/broadcast";
 
 interface TodoListProps {
   plan: BroadcastPlan | null;
   compact?: boolean;
+}
+
+function StepTimer() {
+  const [seconds, setSeconds] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setSeconds((s) => s + 1), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return (
+    <span className="text-[8px] text-[var(--accent-orange)] tabular-nums font-mono ml-auto shrink-0">
+      {m}:{String(s).padStart(2, "0")}
+    </span>
+  );
 }
 
 export default function TodoList({ plan, compact }: TodoListProps) {
@@ -61,7 +77,7 @@ export default function TodoList({ plan, compact }: TodoListProps) {
             <div className="flex items-start gap-1.5 py-0.5">
               <span className="w-3.5 text-center text-[10px] shrink-0">
                 {step.status === "done" ? "✅" : step.status === "active" ? (
-                  <span className="text-[var(--accent-blue)]">▶</span>
+                  <span className="text-[var(--accent-blue)] animate-pulse">▶</span>
                 ) : (
                   <span className="text-[var(--text-muted)]">○</span>
                 )}
@@ -77,6 +93,7 @@ export default function TodoList({ plan, compact }: TodoListProps) {
               >
                 {step.label}
               </span>
+              {step.status === "active" && <StepTimer />}
             </div>
             {step.status === "active" && step.substeps?.map((sub, i) => (
               <div key={i} className="flex items-center gap-1 ml-5 py-px">

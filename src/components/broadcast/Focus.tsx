@@ -25,6 +25,7 @@ export default function Focus({ data, vncUrl }: FocusProps) {
         missionName={data.missionName}
         elapsedMs={data.elapsedMs}
         isLive={data.isLive}
+        activityStatus={data.activityStatus}
         compact
       />
 

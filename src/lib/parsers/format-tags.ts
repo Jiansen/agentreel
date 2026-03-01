@@ -1,5 +1,6 @@
 import type { TimelineEvent } from "@/types/timeline";
 import type {
+  ActivityStatus,
   BroadcastData,
   BroadcastPlan,
   BroadcastSummary,
@@ -239,6 +240,24 @@ export function extractBroadcastData(
     (events.find((e) => e.type === "message.user")?.data.content as string)?.slice(0, 60) ??
     "Agent Session";
 
+  const lastTag = tagEvents[tagEvents.length - 1];
+  let activityStatus: ActivityStatus = "idle";
+  if (summary) {
+    activityStatus = "completed";
+  } else if (lastTag) {
+    const typeMap: Record<string, ActivityStatus> = {
+      thinking: "thinking",
+      discovery: "analyzing",
+      challenge: "analyzing",
+      browse: "browsing",
+      output: "writing",
+      message_out: "writing",
+      message_in: "idle",
+      summary: "completed",
+    };
+    activityStatus = typeMap[lastTag.type] ?? "idle";
+  }
+
   return {
     plan: plan.steps.length > 0 ? plan : null,
     events: tagEvents,
@@ -248,5 +267,7 @@ export function extractBroadcastData(
     missionName,
     isLive: !endEvent || endEvent.type !== "session.end",
     elapsedMs: endTime - startTime,
+    activityStatus,
+    lastEventTime: lastTag?.timestamp ?? null,
   };
 }

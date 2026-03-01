@@ -61,6 +61,14 @@ export interface BroadcastSummary {
   keyFinding?: string;
 }
 
+export type ActivityStatus =
+  | "thinking"
+  | "browsing"
+  | "analyzing"
+  | "writing"
+  | "idle"
+  | "completed";
+
 export interface BroadcastData {
   plan: BroadcastPlan | null;
   events: FormatTagEvent[];
@@ -70,6 +78,8 @@ export interface BroadcastData {
   missionName: string;
   isLive: boolean;
   elapsedMs: number;
+  activityStatus: ActivityStatus;
+  lastEventTime: string | null;
 }
 
 export type BroadcastPreset = "landscape" | "portrait";

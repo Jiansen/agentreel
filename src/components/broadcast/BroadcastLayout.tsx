@@ -24,6 +24,8 @@ const EMPTY_DATA: BroadcastData = {
   missionName: "Waiting for task...",
   isLive: true,
   elapsedMs: 0,
+  activityStatus: "idle",
+  lastEventTime: null,
 };
 
 export default function BroadcastLayout({
