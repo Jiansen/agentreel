@@ -220,11 +220,6 @@ build_app() {
   npx next build 2>&1 | tail -5
   if [ -f ".next/BUILD_ID" ]; then
     ok "Build complete"
-    if [ -f ".next/standalone/server.js" ]; then
-      cp -r .next/static .next/standalone/.next/static 2>/dev/null || true
-      cp -r public .next/standalone/public 2>/dev/null || true
-      ok "Static assets copied to standalone"
-    fi
   else
     fail "Build failed"
     FAILED_STEP="build"; ERROR_MSG="next build failed"
@@ -368,15 +363,7 @@ cmd_start() {
 
   # Viewer (Next.js)
   cd "$AGENTREEL_DIR"
-  if [ -f ".next/standalone/server.js" ]; then
-    # Standalone mode: copy static assets then use node directly
-    cp -r .next/static .next/standalone/.next/static 2>/dev/null || true
-    cp -r public .next/standalone/public 2>/dev/null || true
-    PORT="$port" HOSTNAME="0.0.0.0" nohup node .next/standalone/server.js \
-      > "$AGENTREEL_DIR/logs/viewer.log" 2>&1 &
-    echo $! > "$AGENTREEL_DIR/pids/viewer.pid"
-    echo "  Viewer: http://localhost:${port}"
-  elif [ -f ".next/BUILD_ID" ]; then
+  if [ -f ".next/BUILD_ID" ]; then
     PORT="$port" nohup npx next start -p "$port" \
       > "$AGENTREEL_DIR/logs/viewer.log" 2>&1 &
     echo $! > "$AGENTREEL_DIR/pids/viewer.pid"
@@ -532,11 +519,8 @@ cmd_doctor() {
   echo ""
 
   # 1. Build
-  if [ -f "$AGENTREEL_DIR/.next/standalone/server.js" ]; then
-    _check PASS "Build" ".next/standalone/server.js present"
-  elif [ -f "$AGENTREEL_DIR/.next/BUILD_ID" ]; then
-    _check WARN "Build" ".next/BUILD_ID present but no standalone build"
-    _suggest "Run: cd $AGENTREEL_DIR && npx next build"
+  if [ -f "$AGENTREEL_DIR/.next/BUILD_ID" ]; then
+    _check PASS "Build" ".next/BUILD_ID present"
   else
     _check FAIL "Build" "No build found in $AGENTREEL_DIR/.next/"
     _suggest "Run: cd $AGENTREEL_DIR && npm install && npx next build"
@@ -757,21 +741,12 @@ verify_install() {
   log "Verifying installation..."
   cd "$INSTALL_DIR"
 
-  local server_cmd
-  if [ -f ".next/standalone/server.js" ]; then
-    cp -r .next/static .next/standalone/.next/static 2>/dev/null || true
-    cp -r public .next/standalone/public 2>/dev/null || true
-    PORT=$PORT HOSTNAME=0.0.0.0 node .next/standalone/server.js &
-    server_cmd="standalone"
-  else
-    PORT=$PORT npx next start -p "$PORT" &
-    server_cmd="next start"
-  fi
+  PORT=$PORT npx next start -p "$PORT" &
   local VIEWER_PID=$!
   sleep 5
 
   if curl -sf "http://localhost:$PORT" > /dev/null 2>&1; then
-    ok "Viewer responding on http://localhost:$PORT ($server_cmd)"
+    ok "Viewer responding on http://localhost:$PORT"
     VIEWER_VERIFIED="true"
     kill $VIEWER_PID 2>/dev/null
     wait $VIEWER_PID 2>/dev/null || true
@@ -827,10 +802,9 @@ REPORTEOF
 
 print_acceptance_report() {
   local duration=$(( $(date +%s) - START_TIME ))
-  local has_standalone=false has_build=false has_relay=false has_openclaw=false has_skill=false
+  local has_build=false has_relay=false has_openclaw=false has_skill=false
   local viewer_verified="${VIEWER_VERIFIED:-false}"
 
-  [ -f "$INSTALL_DIR/.next/standalone/server.js" ] && has_standalone=true
   [ -f "$INSTALL_DIR/.next/BUILD_ID" ] && has_build=true
   [ -f "$INSTALL_DIR/server/relay_server.py" ] && command -v python3 &>/dev/null && has_relay=true
   command -v openclaw &>/dev/null && has_openclaw=true
@@ -844,9 +818,7 @@ print_acceptance_report() {
   echo -e "${NC}"
 
   echo -e "  ${BOLD}Core Components${NC}"
-  if [ "$has_standalone" = true ]; then
-    echo -e "    ${GREEN}✓${NC} Viewer (Next.js standalone)     installed"
-  elif [ "$has_build" = true ]; then
+  if [ "$has_build" = true ]; then
     echo -e "    ${GREEN}✓${NC} Viewer (Next.js)                installed"
   else
     echo -e "    ${RED}✗${NC} Viewer                           build failed"
