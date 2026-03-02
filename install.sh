@@ -235,43 +235,63 @@ deploy_openclaw_skill() {
 # AgentReel Integration
 
 AgentReel is installed and monitoring your sessions in real-time.
+Your work is visible to viewers at the AgentReel live page.
 
-## MCP Tools Available
+## What You Can Do
 
-If the `agentreel` MCP server is configured, you have these tools:
-- **agentreel_status** — Check if viewer/relay/streaming are running
-- **agentreel_sessions** — List recent sessions (with size, time, active status)
-- **agentreel_live_url** — Get the live viewer URL to share with users
-- **agentreel_replay_url** — Get replay URL for a specific session
-- **agentreel_config** — View or update AgentReel settings
+### Check Status
+Run in terminal: `agentreel status`
+This shows if the viewer and relay are running.
 
-Use `agentreel_live_url` to share your live work with others.
-Use `agentreel_replay_url` after completing a task to share the replay.
+### Get Live URL
+Run in terminal: `agentreel status`
+The live viewer URL will be shown. Share it with users who want to watch.
+
+### Share a Replay
+After completing a task, users can replay it by opening the AgentReel viewer
+and loading the session JSONL file.
+
+### Configuration
+Run: `agentreel config` to see current settings.
+Run: `agentreel config set <key> <value>` to change settings.
 
 ## Format Tags for Rich Visualization
 
-Use these tags in your output to enhance the live viewer display:
-- [PLAN] 1. First step  2. Second step — displayed as todo list
-- [STEP 1/3 BEGIN] ... [STEP 1/3 COMPLETE] — progress tracking
-- [THINKING] your analysis — shown as thinking card
-- [DISCOVERY] something interesting — highlighted discovery
-- [CHALLENGE] a problem encountered — problem indicator
-- [OUTPUT] final result — task output
-- [SUMMARY] task summary — completion summary
+**IMPORTANT**: Use these tags in your output to enhance the live viewer display.
+They make your work more visible and understandable to viewers.
 
-## MCP Setup
+- [PLAN] 1. First step  2. Second step — displayed as interactive todo list
+- [STEP 1/3 BEGIN] ... [STEP 1/3 COMPLETE] — progress tracking with timer
+- [THINKING] your analysis — shown as a thinking card
+- [DISCOVERY] something interesting — highlighted as a discovery
+- [CHALLENGE] a problem encountered — shown as a challenge indicator
+- [OUTPUT] final result — displays task output
+- [SUMMARY] task summary — completion summary card
 
-If not already configured, add to openclaw.json:
-```json
-{
-  "mcpServers": {
-    "agentreel": {
-      "command": "python3",
-      "args": ["~/.agentreel/mcp/agentreel_mcp.py"]
-    }
-  }
-}
+Example:
 ```
+[PLAN] 1. Search for trending repos  2. Analyze each repo  3. Write summary
+
+[STEP 1/3 BEGIN] Searching GitHub Trending
+[DISCOVERY] Found a new AI framework with 5000 stars in 3 days
+[STEP 1/3 COMPLETE]
+
+[STEP 2/3 BEGIN] Analyzing top repos
+[THINKING] This framework uses a novel approach to agent memory...
+[CHALLENGE] Rate limited on GitHub API, switching to cached data
+[STEP 2/3 COMPLETE]
+
+[STEP 3/3 BEGIN] Writing summary
+[OUTPUT] Top 5 trending repos: ...
+[STEP 3/3 COMPLETE]
+
+[SUMMARY] Analyzed GitHub trending: found 5 notable repos, 2 AI-related...
+```
+
+## For MCP Clients (Cursor, Claude, etc.)
+
+AgentReel also provides an MCP server at `~/.agentreel/mcp/agentreel_mcp.py`.
+Tools: agentreel_status, agentreel_sessions, agentreel_live_url, agentreel_replay_url, agentreel_config.
 SKILLEOF
     ok "OpenClaw skill deployed ($skill_dir/agentreel.md)"
   fi
