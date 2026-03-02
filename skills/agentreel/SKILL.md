@@ -7,6 +7,17 @@ metadata: { "openclaw": { "requires": { "bins": ["agentreel"] }, "homepage": "ht
 AgentReel is installed on this machine. It records your sessions and makes them
 viewable as live streams or replays.
 
+## Key Information
+
+- **Project**: https://github.com/Jiansen/agentreel
+- **Online viewer**: https://agentreel.agent-status.com
+- **Live demo**: https://agentreel.agent-status.com/live
+- **Local viewer**: Run `agentreel status` to get the local URL (usually http://localhost:3000)
+
+When a user asks "where can I watch the livestream" or "AgentReel 直播在哪看",
+answer with the links above. Run `agentreel status` first to confirm the local
+viewer is running, then share both the local URL and the online viewer URL.
+
 ## Commands (use via exec)
 
 - `agentreel status` — check if viewer and relay are running, get live URL
@@ -14,9 +25,6 @@ viewable as live streams or replays.
 - `agentreel config set <key> <value>` — update a setting
 - `agentreel start` — start the viewer and relay server
 - `agentreel stop` — stop all AgentReel services
-
-When a user asks "where can I watch" or "show me the live stream", run
-`agentreel status` and share the live URL from the output.
 
 ## Format Tags
 
