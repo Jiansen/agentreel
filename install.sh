@@ -891,14 +891,27 @@ print_acceptance_report() {
   echo "    Config file:   $INSTALL_DIR/.agentreel-config.json"
 
   echo ""
+  echo -e "  ${BOLD}Access URLs${NC}"
+  echo "    Local:   http://localhost:${PORT}/live"
+  local pub_ip
+  pub_ip=$(curl -sf --max-time 3 https://ifconfig.me 2>/dev/null || curl -sf --max-time 3 https://api.ipify.org 2>/dev/null || echo "")
+  if [ -n "$pub_ip" ]; then
+    echo "    Public:  http://${pub_ip}:${PORT}/live"
+    echo -e "    ${YELLOW}Note: public access requires port ${PORT} open in firewall/security group${NC}"
+  else
+    echo "    Public:  (could not detect public IP)"
+    echo "    Tip:     if on a cloud server, open port ${PORT} and use your server's public IP"
+  fi
+
+  echo ""
   echo -e "  ${BOLD}Next Steps${NC}"
   echo "    1. agentreel start              Start viewer + relay"
   echo "    2. agentreel doctor             Verify everything works"
   if [ "$has_openclaw" = true ]; then
-    echo "    3. Send a task to your agent    Watch at http://localhost:${PORT}/live"
+    echo "    3. Send a task to your agent    Watch at the URLs above"
   else
     echo "    3. Install OpenClaw             curl -fsSL https://openclaw.ai/install.sh | bash"
-    echo "    4. Send a task to your agent    Watch at http://localhost:${PORT}/live"
+    echo "    4. Send a task to your agent    Watch at the URLs above"
   fi
   echo ""
   echo "  Docs: https://github.com/Jiansen/agentreel"
@@ -933,6 +946,9 @@ notify_agent_end() {
   components="$components, cli"
   command -v openclaw &>/dev/null && [ -f "$HOME/.openclaw/skills/agentreel/SKILL.md" ] && components="$components, openclaw-skill"
 
+  local pub_ip
+  pub_ip=$(curl -sf --max-time 3 https://ifconfig.me 2>/dev/null || echo "")
+
   echo ""
   echo "---AGENTREEL_INSTALL_DONE---"
   echo "Result: $result (${duration}s)"
@@ -940,7 +956,8 @@ notify_agent_end() {
   echo "Port: $PORT"
   if [ "$result" = "SUCCESS" ]; then
     echo "Quick start: agentreel start && agentreel doctor"
-    echo "Live URL: http://localhost:${PORT}/live"
+    echo "Local URL: http://localhost:${PORT}/live"
+    [ -n "$pub_ip" ] && echo "Public URL: http://${pub_ip}:${PORT}/live (requires port ${PORT} open in firewall)"
   else
     echo "Error: ${ERROR_MSG}"
     echo "Retry: curl -fsSL https://agentreel.agent-status.com/install.sh | bash"

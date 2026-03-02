@@ -2,6 +2,14 @@
 
 You are an AI agent installing AgentReel. Follow these steps exactly.
 
+## IMPORTANT: Notify user first
+
+Before running any commands, immediately tell the user:
+
+> "Installing AgentReel now. This takes about 3-5 minutes (downloading, building, verifying). I'll report back when it's done."
+
+Do NOT wait silently — the user needs to know the process has started.
+
 ## Pre-flight
 
 ```bash
@@ -46,8 +54,10 @@ agentreel start
 ## Report to user
 
 Tell the user:
-1. Installation result (success/partial/failed)
+1. Installation result (success/partial/failed) and how long it took
 2. Which components were installed (viewer, relay, CLI, OpenClaw skill)
-3. The local viewer URL (usually http://localhost:3000/live)
-4. Suggest: "Send me a task and watch it live at the URL above"
-5. If anything failed: what went wrong and what to try next
+3. The local viewer URL: http://localhost:3000/live
+4. If a public IP was detected, also share: http://<public-ip>:3000/live
+   (remind user to open port 3000 in their firewall/security group for external access)
+5. Suggest: "Send me a task and watch it live at the URL above"
+6. If anything failed: what went wrong and what to try next
