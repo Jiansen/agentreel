@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useCallback } from "react";
 import type { ActivityStatus } from "@/types/broadcast";
 
 interface MissionBarProps {
@@ -43,6 +44,49 @@ function ActivityIndicator({ status }: { status: ActivityStatus }) {
   );
 }
 
+function ShareButton() {
+  const [copied, setCopied] = useState(false);
+
+  const handleShare = useCallback(async () => {
+    const url = window.location.href;
+
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({ title: "AgentReel Live", url });
+        return;
+      } catch {
+        // User cancelled or share failed — fall through to clipboard
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard API not available
+    }
+  }, []);
+
+  return (
+    <button
+      onClick={handleShare}
+      className="relative flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium
+        text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]
+        transition-colors shrink-0"
+      title="Share this live session"
+    >
+      <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 8V14H12V8" />
+        <polyline points="8,2 12,6" />
+        <polyline points="8,2 4,6" />
+        <line x1="8" y1="2" x2="8" y2="10" />
+      </svg>
+      {copied ? "Copied!" : "Share"}
+    </button>
+  );
+}
+
 export default function MissionBar({ missionName, elapsedMs, isLive, compact, activityStatus = "idle" }: MissionBarProps) {
   if (compact) {
     return (
@@ -51,6 +95,7 @@ export default function MissionBar({ missionName, elapsedMs, isLive, compact, ac
         <span className="text-[10px] font-bold truncate">{missionName}</span>
         <ActivityIndicator status={activityStatus} />
         <span className="text-[9px] text-[var(--text-muted)] ml-auto shrink-0">{formatElapsed(elapsedMs)}</span>
+        <ShareButton />
       </div>
     );
   }
@@ -66,6 +111,7 @@ export default function MissionBar({ missionName, elapsedMs, isLive, compact, ac
       <span className="text-[11px] font-semibold truncate">{missionName}</span>
       <ActivityIndicator status={activityStatus} />
       <span className="text-[10px] text-[var(--text-muted)] ml-auto shrink-0">{formatElapsed(elapsedMs)}</span>
+      <ShareButton />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import LiveViewer from "@/components/LiveViewer";
+import { Suspense } from "react";
+import BroadcastClient from "./BroadcastClient";
 
 export const metadata: Metadata = {
   title: "AgentReel Live — Watch AI Agents Work in Real-Time",
@@ -7,10 +8,20 @@ export const metadata: Metadata = {
     "Live stream of AI agent sessions. Watch tool calls, reasoning, and results appear in real-time.",
   openGraph: {
     title: "AgentReel Live — Watch AI Agents Work in Real-Time",
-    description: "Real-time AI agent session viewer. Watch the agent think and act.",
+    description: "Real-time AI agent session viewer with desktop capture, task progress, and session history.",
   },
 };
 
 export default function LivePage() {
-  return <LiveViewer />;
+  return (
+    <Suspense
+      fallback={
+        <div className="w-screen h-screen flex items-center justify-center bg-[var(--bg-primary)] text-[var(--text-muted)]">
+          Loading live view...
+        </div>
+      }
+    >
+      <BroadcastClient />
+    </Suspense>
+  );
 }

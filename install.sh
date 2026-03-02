@@ -889,6 +889,10 @@ print_acceptance_report() {
   echo "    Relay port:    ${AGENTREEL_RELAY_PORT:-8765}"
   echo "    Watch dir:     ${AGENTREEL_WATCH_DIR:-~/.openclaw/agents/main/sessions/}"
   echo "    Config file:   $INSTALL_DIR/.agentreel-config.json"
+  if [ -n "${ADMIN_TOKEN:-}" ]; then
+    echo "    Admin token:   $ADMIN_TOKEN"
+    echo "    Settings URL:  http://localhost:${PORT}/settings"
+  fi
 
   echo ""
   echo -e "  ${BOLD}Access URLs${NC}"
@@ -958,6 +962,8 @@ notify_agent_end() {
     echo "Quick start: agentreel start && agentreel doctor"
     echo "Local URL: http://localhost:${PORT}/live"
     [ -n "$pub_ip" ] && echo "Public URL: http://${pub_ip}:${PORT}/live (requires port ${PORT} open in firewall)"
+    [ -n "${ADMIN_TOKEN:-}" ] && echo "Settings: http://localhost:${PORT}/settings (token: ${ADMIN_TOKEN})"
+    echo "IMPORTANT: Save the admin token above — it's needed to access settings."
   else
     echo "Error: ${ERROR_MSG}"
     echo "Retry: curl -fsSL https://agentreel.agent-status.com/install.sh | bash"
@@ -1013,6 +1019,26 @@ build_app || { print_failure; send_report; exit 1; }
 
 create_cli
 deploy_openclaw_skill
+
+# Generate admin token for settings panel
+ADMIN_TOKEN=$(python3 -c "import secrets; print(secrets.token_urlsafe(24))" 2>/dev/null || head -c 24 /dev/urandom | base64 | tr -d '/+=' | head -c 32)
+CONFIG_DIR="$INSTALL_DIR"
+CONFIG_PATH="$CONFIG_DIR/.agentreel-config.json"
+mkdir -p "$CONFIG_DIR"
+if [ -f "$CONFIG_PATH" ]; then
+  python3 -c "
+import json
+f = '$CONFIG_PATH'
+d = json.load(open(f))
+if '_admin_token' not in d:
+    d['_admin_token'] = '$ADMIN_TOKEN'
+    json.dump(d, open(f, 'w'), indent=2)
+" 2>/dev/null
+else
+  echo "{\"_admin_token\": \"$ADMIN_TOKEN\"}" > "$CONFIG_PATH"
+fi
+log "Admin token generated for settings panel"
+
 verify_install
 
 print_success

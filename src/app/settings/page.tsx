@@ -125,33 +125,49 @@ const FIELD_GROUPS = [
   },
 ];
 
+function getStoredToken(): string {
+  if (typeof window === "undefined") return "";
+  return document.cookie.replace(/(?:(?:^|.*;\s*)agentreel_token\s*=\s*([^;]*).*$)|^.*$/, "$1") ||
+    localStorage.getItem("agentreel_token") || "";
+}
+
+function storeToken(token: string) {
+  document.cookie = `agentreel_token=${token}; path=/; max-age=31536000; SameSite=Strict`;
+  localStorage.setItem("agentreel_token", token);
+}
+
 export default function SettingsPage() {
   const [config, setConfig] = useState<Config>(DEFAULT_CONFIG);
   const [saved, setSaved] = useState(false);
-  const [isLocal, setIsLocal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState(false);
+  const [tokenInput, setTokenInput] = useState("");
 
-  useEffect(() => {
-    const hostname = window.location.hostname;
-    const local =
-      hostname === "localhost" ||
-      hostname === "127.0.0.1" ||
-      hostname.startsWith("192.168.") ||
-      hostname.startsWith("10.");
-    setIsLocal(local);
+  const loadConfig = useCallback((token?: string) => {
+    const t = token || getStoredToken();
+    const headers: Record<string, string> = {};
+    if (t) headers["Authorization"] = `Bearer ${t}`;
 
-    if (local) {
-      fetch("/api/settings")
-        .then((r) => (r.ok ? r.json() : DEFAULT_CONFIG))
-        .then((data) => {
+    fetch("/api/settings", { headers })
+      .then((r) => {
+        if (r.status === 401) {
+          setAuthError(true);
+          setLoading(false);
+          return null;
+        }
+        setAuthError(false);
+        return r.ok ? r.json() : DEFAULT_CONFIG;
+      })
+      .then((data) => {
+        if (data) {
           setConfig({ ...DEFAULT_CONFIG, ...data });
           setLoading(false);
-        })
-        .catch(() => setLoading(false));
-    } else {
-      setLoading(false);
-    }
+        }
+      })
+      .catch(() => setLoading(false));
   }, []);
+
+  useEffect(() => { loadConfig(); }, [loadConfig]);
 
   const handleChange = useCallback(
     (key: string, value: string) => {
@@ -163,11 +179,19 @@ export default function SettingsPage() {
 
   const handleSave = useCallback(async () => {
     try {
+      const t = getStoredToken();
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (t) headers["Authorization"] = `Bearer ${t}`;
+
       const res = await fetch("/api/settings", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify(config),
       });
+      if (res.status === 401) {
+        setAuthError(true);
+        return;
+      }
       if (res.ok) {
         setSaved(true);
         setTimeout(() => setSaved(false), 3000);
@@ -177,20 +201,43 @@ export default function SettingsPage() {
     }
   }, [config]);
 
-  if (!isLocal) {
+  if (authError) {
     return (
       <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
-        <div className="text-center max-w-md">
+        <div className="text-center max-w-sm">
           <div className="text-4xl mb-4">🔒</div>
           <h1 className="text-xl font-bold text-white mb-2">
-            Settings — Local Access Only
+            Admin Token Required
           </h1>
-          <p className="text-gray-400 text-sm">
-            Configuration is only available when accessing from localhost.
+          <p className="text-gray-400 text-sm mb-4">
+            Enter the token from your installation to access settings.
             <br />
-            Use <code className="text-cyan-400">agentreel config</code> via CLI
-            instead.
+            Find it with: <code className="text-cyan-400">agentreel config get _admin_token</code>
           </p>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            if (tokenInput.trim()) {
+              storeToken(tokenInput.trim());
+              setAuthError(false);
+              setLoading(true);
+              loadConfig(tokenInput.trim());
+            }
+          }} className="flex gap-2">
+            <input
+              type="password"
+              value={tokenInput}
+              onChange={(e) => setTokenInput(e.target.value)}
+              placeholder="Paste admin token..."
+              className="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none"
+              autoFocus
+            />
+            <button
+              type="submit"
+              className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-sm font-medium transition-colors"
+            >
+              Unlock
+            </button>
+          </form>
         </div>
       </div>
     );

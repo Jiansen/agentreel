@@ -67,8 +67,6 @@ export default function DropZone({ onFileLoaded }: DropZoneProps) {
         <div className="flex items-center gap-4 mt-3 text-sm">
           <a href="/live" className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">Live</a>
           <span className="text-[var(--border)]">·</span>
-          <a href="/broadcast" className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">Broadcast</a>
-          <span className="text-[var(--border)]">·</span>
           <a href="https://cloud.agentreel.agent-status.com" className="text-[var(--accent-blue)] hover:text-[var(--accent-blue)]/80 transition-colors font-medium">Cloud ↗</a>
         </div>
       </motion.div>

@@ -6,48 +6,78 @@ import { homedir } from "os";
 const CONFIG_DIR = join(homedir(), ".agentreel");
 const CONFIG_FILE = join(CONFIG_DIR, "config.json");
 
-function isLocalRequest(request: NextRequest): boolean {
-  const host = request.headers.get("host") || "";
-  return (
-    host.startsWith("localhost") ||
-    host.startsWith("127.0.0.1") ||
-    host.startsWith("192.168.") ||
-    host.startsWith("10.")
-  );
+async function getAdminToken(): Promise<string | null> {
+  try {
+    const data = await readFile(CONFIG_FILE, "utf-8");
+    const config = JSON.parse(data);
+    return config._admin_token || null;
+  } catch {
+    return null;
+  }
+}
+
+function isAuthorized(request: NextRequest, token: string | null): boolean {
+  if (!token) return true;
+
+  const authHeader = request.headers.get("authorization") || "";
+  if (authHeader.startsWith("Bearer ") && authHeader.slice(7) === token) {
+    return true;
+  }
+
+  const cookieToken = request.cookies.get("agentreel_token")?.value;
+  if (cookieToken === token) {
+    return true;
+  }
+
+  return false;
 }
 
 export async function GET(request: NextRequest) {
-  if (!isLocalRequest(request)) {
+  const token = await getAdminToken();
+  if (!isAuthorized(request, token)) {
     return Response.json(
-      { error: "Settings only accessible from localhost" },
-      { status: 403 }
+      { error: "Unauthorized. Provide admin token via Bearer header or cookie." },
+      { status: 401 }
     );
   }
 
   try {
     const data = await readFile(CONFIG_FILE, "utf-8");
-    return Response.json(JSON.parse(data));
+    const config = JSON.parse(data);
+    const { _admin_token: _, ...safeConfig } = config;
+    return Response.json(safeConfig);
   } catch {
     return Response.json({});
   }
 }
 
 export async function POST(request: NextRequest) {
-  if (!isLocalRequest(request)) {
+  const token = await getAdminToken();
+  if (!isAuthorized(request, token)) {
     return Response.json(
-      { error: "Settings only accessible from localhost" },
-      { status: 403 }
+      { error: "Unauthorized. Provide admin token via Bearer header or cookie." },
+      { status: 401 }
     );
   }
 
   try {
-    const config = await request.json();
+    const body = await request.json();
 
     const safeConfig: Record<string, string> = {};
-    for (const [key, value] of Object.entries(config)) {
+    for (const [key, value] of Object.entries(body)) {
       if (typeof value === "string" && value.length < 1000) {
         safeConfig[key] = value;
       }
+    }
+
+    let existing: Record<string, string> = {};
+    try {
+      const data = await readFile(CONFIG_FILE, "utf-8");
+      existing = JSON.parse(data);
+    } catch { /* first save */ }
+
+    if (existing._admin_token) {
+      safeConfig._admin_token = existing._admin_token;
     }
 
     await mkdir(CONFIG_DIR, { recursive: true });

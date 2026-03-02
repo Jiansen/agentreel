@@ -187,7 +187,7 @@ Three ways to share sessions:
 ```
 agentreel/
   src/
-    app/            # Next.js pages (/, /live, /broadcast, /settings, etc.)
+    app/            # Next.js pages (/, /live, /settings, etc.)
     components/     # React components (Viewer, EventCard, LiveViewer, etc.)
     lib/
       parsers/      # Format adapters (openclaw.ts — one per supported format)
