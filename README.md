@@ -32,13 +32,36 @@ Currently supports **OpenClaw** transcripts (v3 + legacy). More formats coming s
 
 ## Quick Start
 
-### Use Online
+### One-Line Install
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Jiansen/agentreel/main/install.sh | bash
+```
+
+This installs the viewer + relay server, creates the `agentreel` CLI, and auto-detects your OpenClaw sessions.
+
+```bash
+agentreel start     # Start viewer + relay
+agentreel status    # Check service status
+agentreel stop      # Stop services
+agentreel help      # All commands
+```
+
+Open [http://localhost:3000](http://localhost:3000) to view replays, or [http://localhost:3000/live](http://localhost:3000/live) for real-time agent activity.
+
+### AI Agent Install
+
+Already have OpenClaw? Tell your agent:
+
+> Install AgentReel by following the runbook at https://agentreel.agent-status.com/api/install — run each step, verify the output, and report the final status. Then start AgentReel with `agentreel start`.
+
+### Use Online (no install)
 
 Visit **[agentreel.agent-status.com](https://agentreel.agent-status.com)** and drop your OpenClaw JSONL file.
 
 Try the demo: [agentreel.agent-status.com/?demo](https://agentreel.agent-status.com/?demo)
 
-### Run Locally
+### Manual Install
 
 ```bash
 git clone https://github.com/Jiansen/agentreel.git

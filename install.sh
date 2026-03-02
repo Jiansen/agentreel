@@ -227,6 +227,30 @@ build_app() {
   fi
 }
 
+deploy_openclaw_skill() {
+  local skill_dir="$HOME/.openclaw/workspace/skills"
+  if [ -d "$HOME/.openclaw" ]; then
+    mkdir -p "$skill_dir"
+    cat > "$skill_dir/agentreel.md" << 'SKILLEOF'
+# AgentReel Integration
+
+AgentReel is monitoring your sessions. Your work is visible in real-time.
+
+When executing tasks, use these format tags for rich visualization:
+- [PLAN] 1. First step  2. Second step — displayed as todo list
+- [STEP 1/3 BEGIN] ... [STEP 1/3 COMPLETE] — progress tracking
+- [THINKING] your analysis — shown as thinking card
+- [DISCOVERY] something interesting — highlighted discovery
+- [CHALLENGE] a problem encountered — problem indicator
+- [OUTPUT] final result — task output
+- [SUMMARY] task summary — completion summary
+
+To check status: run `agentreel status` in terminal
+SKILLEOF
+    ok "OpenClaw skill deployed ($skill_dir/agentreel.md)"
+  fi
+}
+
 create_cli() {
   log "Creating CLI entry point..."
 
@@ -557,6 +581,17 @@ print_success() {
   echo "  View at: http://localhost:${PORT}"
   echo "  Docs:    https://github.com/Jiansen/agentreel"
   echo ""
+  if command -v openclaw &>/dev/null; then
+    echo -e "  ${CYAN}OpenClaw detected! Try this:${NC}"
+    echo "    1. Run: agentreel start"
+    echo "    2. Send a message to your OpenClaw agent (via Telegram or CLI)"
+    echo "    3. Watch it appear live at http://localhost:${PORT}/live"
+    echo ""
+  else
+    echo "  To see live agent activity, install OpenClaw first:"
+    echo "    curl -fsSL https://openclaw.ai/install.sh | bash"
+    echo ""
+  fi
   if ! echo "$PATH" | grep -q "$HOME/.local/bin"; then
     echo -e "  ${YELLOW}Note: Run 'source ~/.bashrc' or restart your shell to use 'agentreel' command${NC}"
     echo ""
@@ -602,6 +637,7 @@ log "Step 6/6: Building..."
 build_app || { print_failure; send_report; exit 1; }
 
 create_cli
+deploy_openclaw_skill
 verify_install
 
 print_success
