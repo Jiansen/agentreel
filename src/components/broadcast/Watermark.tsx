@@ -2,22 +2,22 @@
 
 export default function Watermark() {
   const stroke = `
-    -2px -2px 0 rgba(0,0,0,0.5),
-     2px -2px 0 rgba(0,0,0,0.5),
-    -2px  2px 0 rgba(0,0,0,0.5),
-     2px  2px 0 rgba(0,0,0,0.5),
-     0    -2px 0 rgba(0,0,0,0.4),
-     0     2px 0 rgba(0,0,0,0.4),
-    -2px   0  0 rgba(0,0,0,0.4),
-     2px   0  0 rgba(0,0,0,0.4)
+    -3px -3px 0 rgba(0,0,0,0.7),
+     3px -3px 0 rgba(0,0,0,0.7),
+    -3px  3px 0 rgba(0,0,0,0.7),
+     3px  3px 0 rgba(0,0,0,0.7),
+     0    -3px 0 rgba(0,0,0,0.6),
+     0     3px 0 rgba(0,0,0,0.6),
+    -3px   0  0 rgba(0,0,0,0.6),
+     3px   0  0 rgba(0,0,0,0.6)
   `.trim();
 
   return (
     <>
       <span
-        className="absolute z-10 pointer-events-none select-none text-2xl font-bold tracking-wider animate-[wm-float_60s_linear_infinite]"
+        className="absolute z-10 pointer-events-none select-none text-5xl font-bold tracking-wider animate-[wm-float_60s_linear_infinite]"
         style={{
-          color: "rgba(139, 92, 246, 0.22)",
+          color: "rgba(139, 92, 246, 0.28)",
           textShadow: stroke,
           top: "15%",
           left: "10%",
@@ -26,9 +26,9 @@ export default function Watermark() {
         AgentReel
       </span>
       <span
-        className="absolute z-10 pointer-events-none select-none text-sm font-bold tracking-wider animate-[wm-float_45s_linear_infinite_reverse]"
+        className="absolute z-10 pointer-events-none select-none text-xl font-bold tracking-wider animate-[wm-float_45s_linear_infinite_reverse]"
         style={{
-          color: "rgba(139, 92, 246, 0.18)",
+          color: "rgba(139, 92, 246, 0.22)",
           textShadow: stroke,
           top: "50%",
           left: "40%",

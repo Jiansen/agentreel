@@ -200,11 +200,11 @@ export default function AgentTerminal({ rawLines, sessionId, maxLines = 30 }: Ag
       </div>
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-1.5 font-mono text-[9px] leading-[1.6] space-y-px">
         {lines.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full gap-2 text-[#3a3a5a]">
-            <div className="text-[10px] font-mono">
+          <div className="flex flex-col items-center justify-center h-full gap-2">
+            <div className="text-[11px] font-mono text-white">
               $ tail -f session.jsonl<span className="term-cursor" />
             </div>
-            <div className="text-[8px] animate-pulse">Waiting for agent events...</div>
+            <div className="text-[9px] text-[#8a8aaa] animate-pulse">Waiting for agent events...</div>
           </div>
         ) : (
           lines.map((line, i) => {

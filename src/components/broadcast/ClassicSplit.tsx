@@ -6,7 +6,7 @@ import AgentTerminal from "./AgentTerminal";
 import MissionBar from "./MissionBar";
 import TodoList from "./TodoList";
 import StreamCards from "./StreamCards";
-import OutputPanel from "./OutputPanel";
+import HistoryPanel from "./HistoryPanel";
 import MessagePanel from "./MessagePanel";
 import TabCycler from "./TabCycler";
 import QRFooter from "./QRFooter";
@@ -15,14 +15,15 @@ import Watermark from "./Watermark";
 interface ClassicSplitProps {
   data: BroadcastData;
   vncUrl: string;
+  relayUrl: string;
   rawLines?: string[];
   tabIntervalMs?: number;
 }
 
-export default function ClassicSplit({ data, vncUrl, rawLines = [], tabIntervalMs = 10000 }: ClassicSplitProps) {
+export default function ClassicSplit({ data, vncUrl, relayUrl, rawLines = [], tabIntervalMs = 10000 }: ClassicSplitProps) {
   const tabs = [
     { label: "Stream", content: <StreamCards events={data.events} /> },
-    { label: "Output", content: <OutputPanel outputs={data.outputs} /> },
+    { label: "History", content: <HistoryPanel relayUrl={relayUrl} /> },
     { label: "Messages", content: <MessagePanel messages={data.messages} /> },
   ];
 

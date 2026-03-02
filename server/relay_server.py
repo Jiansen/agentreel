@@ -253,6 +253,86 @@ upload_limiter = RateLimiter()
 sse_clients: list = []
 sse_lock = Lock()
 
+_watch_dir_ref: str | None = None
+
+
+def _extract_session_summary(filepath: str, limit_events: int = 500) -> dict | None:
+    """Extract task name, status, and summary from a session JSONL file."""
+    try:
+        fname = os.path.basename(filepath)
+        stat = os.stat(filepath)
+        task = ""
+        started_at = ""
+        last_agent = ""
+        event_count = 0
+        has_end = False
+
+        with open(filepath, "r") as f:
+            for line in f:
+                event_count += 1
+                if event_count > limit_events:
+                    break
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    obj = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+
+                etype = obj.get("type", "")
+                if etype == "session":
+                    started_at = obj.get("timestamp", "")
+                elif etype == "message" and obj.get("message", {}).get("role") == "user":
+                    if not task:
+                        content = obj["message"].get("content", "")
+                        if isinstance(content, list):
+                            content = " ".join(
+                                b.get("text", "") for b in content if b.get("type") == "text"
+                            )
+                        task = str(content)[:80]
+                elif etype == "message" and obj.get("message", {}).get("role") == "assistant":
+                    content = obj["message"].get("content", "")
+                    if isinstance(content, list):
+                        texts = [b.get("text", "") for b in content if b.get("type") == "text"]
+                        content = " ".join(texts)
+                    if content:
+                        last_agent = str(content)[:150]
+
+                if etype in ("session.end", "result"):
+                    has_end = True
+
+        if not task:
+            return None
+
+        return {
+            "file": fname,
+            "task": task,
+            "startedAt": started_at or datetime.fromtimestamp(
+                stat.st_mtime, tz=timezone.utc
+            ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "status": "done" if has_end else "running",
+            "events": event_count,
+            "summary": last_agent,
+        }
+    except Exception:
+        return None
+
+
+def get_session_history(limit: int = 10) -> list[dict]:
+    """Return summaries of recent sessions from the watch directory."""
+    watch_dir = _watch_dir_ref
+    if not watch_dir:
+        return []
+    pattern = os.path.join(watch_dir, "**", "*.jsonl")
+    files = sorted(glob.glob(pattern, recursive=True), key=os.path.getmtime, reverse=True)
+    results = []
+    for fpath in files[:limit]:
+        info = _extract_session_summary(fpath)
+        if info:
+            results.append(info)
+    return results
+
 
 class RelayHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -268,6 +348,9 @@ class RelayHandler(BaseHTTPRequestHandler):
 
         elif self.path == "/api/stream":
             self._handle_sse()
+
+        elif self.path == "/api/history":
+            self._json_response({"sessions": get_session_history()})
 
         elif self.path == "/api/transcripts":
             self._json_response({
@@ -459,12 +542,15 @@ def main():
     parser.add_argument("--port", type=int, default=int(os.environ.get("RELAY_PORT", "8765")))
     args = parser.parse_args()
 
+    global _watch_dir_ref
+
     if args.file:
         watcher.set_file(args.file)
         print(f"[relay] Watching file: {args.file}")
-    elif args.watch_dir:
+    if args.watch_dir:
+        _watch_dir_ref = args.watch_dir
         print(f"[relay] Watching directory: {args.watch_dir}")
-    else:
+    if not args.file and not args.watch_dir:
         print("[relay] No file or directory specified. Waiting for sessions...")
 
     poll_thread = Thread(target=poll_loop, args=(args.watch_dir,), daemon=True)
