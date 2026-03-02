@@ -49,11 +49,25 @@ agentreel help      # All commands
 
 Open [http://localhost:3000](http://localhost:3000) to view replays, or [http://localhost:3000/live](http://localhost:3000/live) for real-time agent activity.
 
-### AI Agent Install
+### AI Agent Install (OpenClaw, Cursor, etc.)
 
-Already have OpenClaw? Tell your agent:
+Have an AI agent? Send it this one message:
 
-> Install AgentReel by following the runbook at https://agentreel.agent-status.com/api/install — run each step, verify the output, and report the final status. Then start AgentReel with `agentreel start`.
+```
+Read https://raw.githubusercontent.com/Jiansen/agentreel/main/AGENT_INSTALL.md and follow every step. Report the result when done.
+```
+
+The agent will install AgentReel, run diagnostics, start services, and report back — typically in 3-5 minutes.
+
+<details>
+<summary>Or use the one-line install command directly</summary>
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Jiansen/agentreel/main/install.sh | bash
+agentreel doctor   # verify installation
+agentreel start    # start viewer + relay
+```
+</details>
 
 ### Use Online (no install)
 
