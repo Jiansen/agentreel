@@ -1,7 +1,5 @@
 "use client";
 
-import Watermark from "./Watermark";
-
 interface AgentViewProps {
   vncUrl: string;
   className?: string;
@@ -28,7 +26,6 @@ export default function AgentView({ vncUrl, className = "", children }: AgentVie
           </div>
         </div>
       )}
-      <Watermark />
       {children}
     </div>
   );

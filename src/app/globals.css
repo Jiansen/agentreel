@@ -127,3 +127,27 @@ body {
   50%  { opacity: 1; }
   100% { transform: translateX(200%); opacity: 0; }
 }
+
+/* Agent Terminal styles */
+.term-cursor {
+  display: inline-block;
+  width: 6px;
+  height: 12px;
+  background: #4ade80;
+  opacity: 0.8;
+  margin-left: 1px;
+  vertical-align: text-bottom;
+  animation: blink-cursor 1s step-end infinite;
+}
+@keyframes blink-cursor {
+  0%, 100% { opacity: 0.8; }
+  50%      { opacity: 0; }
+}
+.term-session  { color: #4ade80; }
+.term-model    { color: #60a5fa; }
+.term-user     { color: #fbbf24; }
+.term-thinking { color: #c084fc; }
+.term-tool     { color: #38bdf8; }
+.term-agent    { color: #e2e8f0; }
+.term-result   { color: #6ee7b7; }
+.term-error    { color: #f87171; }
