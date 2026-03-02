@@ -267,6 +267,7 @@ def _extract_session_summary(filepath: str, limit_events: int = 500) -> dict | N
         last_agent = ""
         event_count = 0
         has_end = False
+        has_summary = False
 
         with open(filepath, "r") as f:
             for line in f:
@@ -299,6 +300,8 @@ def _extract_session_summary(filepath: str, limit_events: int = 500) -> dict | N
                         content = " ".join(texts)
                     if content:
                         last_agent = str(content)[:150]
+                        if "[SUMMARY]" in content or "[OUTPUT" in content:
+                            has_summary = True
 
                 if etype in ("session.end", "result"):
                     has_end = True
@@ -306,13 +309,16 @@ def _extract_session_summary(filepath: str, limit_events: int = 500) -> dict | N
         if not task:
             return None
 
+        is_stale = (time.time() - stat.st_mtime) > 300
+        is_done = has_end or has_summary or is_stale
+
         return {
             "file": fname,
             "task": task,
             "startedAt": started_at or datetime.fromtimestamp(
                 stat.st_mtime, tz=timezone.utc
             ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "status": "done" if has_end else "running",
+            "status": "done" if is_done else "running",
             "events": event_count,
             "summary": last_agent,
         }
