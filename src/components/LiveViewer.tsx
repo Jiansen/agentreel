@@ -85,6 +85,10 @@ export default function LiveViewer() {
     if (url) {
       setInputUrl(url);
       connect(url);
+    } else {
+      const defaultRelay = `${window.location.origin}/api/relay`;
+      setInputUrl(defaultRelay);
+      connect(defaultRelay);
     }
     return () => disconnect();
   }, [connect, disconnect]);
