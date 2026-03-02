@@ -8,7 +8,6 @@ import type {
   MessageItem,
   OutputItem,
   PlanStep,
-  SubStep,
 } from "@/types/broadcast";
 
 const PLAN_RE = /\[PLAN\]\s*\n((?:\d+\..+\n?)+)/;

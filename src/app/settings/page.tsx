@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 
 interface Config {
   port: string;
@@ -213,12 +214,12 @@ export default function SettingsPage() {
               Configure your local AgentReel instance
             </p>
           </div>
-          <a
+          <Link
             href="/"
             className="text-sm text-gray-400 hover:text-white transition-colors"
           >
             ← Back
-          </a>
+          </Link>
         </div>
 
         {FIELD_GROUPS.map((group) => (
