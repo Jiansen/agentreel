@@ -229,14 +229,62 @@ build_app() {
 
 deploy_openclaw_skill() {
   if [ -d "$HOME/.openclaw" ]; then
-    # Install as a proper OpenClaw skill with SKILL.md format
-    # Precedence: workspace skills > managed skills > bundled
-    # We install to managed (~/.openclaw/skills/) so it works across workspaces
     local skill_dir="$HOME/.openclaw/skills/agentreel"
     mkdir -p "$skill_dir"
     cp "$INSTALL_DIR/skills/agentreel/SKILL.md" "$skill_dir/SKILL.md"
     ok "OpenClaw skill deployed ($skill_dir/SKILL.md)"
     log "  Skill uses requires.bins=[agentreel] — auto-eligible when agentreel is on PATH"
+
+    local memory_file="$HOME/.openclaw/workspace/MEMORY.md"
+    mkdir -p "$(dirname "$memory_file")"
+    local agentreel_block
+    agentreel_block=$(cat <<'MEMBLOCK'
+
+## AgentReel
+
+AgentReel is installed on this machine. It records agent sessions and makes them
+viewable as live streams or replays.
+
+### Where to Watch
+
+- Public viewer: https://agentreel.agent-status.com/live
+- Local viewer: http://localhost:3000/live (after `agentreel start`)
+- GitHub: https://github.com/Jiansen/agentreel
+
+### Commands
+
+- `agentreel start` — start the viewer and relay server
+- `agentreel stop` — stop all services
+- `agentreel status` — check if services are running
+- `agentreel doctor` — full system health check
+- `agentreel doctor --report` — health check + submit report to GitHub Issues
+- `agentreel config` — show/set configuration
+- `agentreel update` — update to latest version
+
+### Format Tags
+
+When executing tasks, use these tags for the live viewer:
+[PLAN], [STEP X/N BEGIN], [STEP X/N COMPLETE], [THINKING],
+[DISCOVERY], [CHALLENGE], [OUTPUT], [SUMMARY]
+
+### Troubleshooting
+
+1. Run `agentreel doctor` for a full check with fix suggestions
+2. If still broken: `agentreel doctor --report` submits diagnostics to GitHub
+MEMBLOCK
+)
+    if [ -f "$memory_file" ]; then
+      if grep -q "## AgentReel" "$memory_file" 2>/dev/null; then
+        ok "MEMORY.md already contains AgentReel section (skipped)"
+      else
+        echo "$agentreel_block" >> "$memory_file"
+        ok "MEMORY.md updated with AgentReel section"
+      fi
+    else
+      echo "# Memory" > "$memory_file"
+      echo "$agentreel_block" >> "$memory_file"
+      ok "MEMORY.md created with AgentReel section"
+    fi
   fi
 }
 
