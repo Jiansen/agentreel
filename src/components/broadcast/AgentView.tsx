@@ -12,8 +12,7 @@ export default function AgentView({ vncUrl, className = "", children }: AgentVie
       {vncUrl ? (
         <iframe
           src={vncUrl}
-          className="absolute w-full border-0"
-          style={{ top: "-28px", height: "calc(100% + 28px)" }}
+          className="absolute inset-0 w-full h-full border-0"
           allow="clipboard-read; clipboard-write"
           title="Agent Desktop"
         />
