@@ -10,8 +10,13 @@ export TZ=UTC
 #   ~/pids/tasks.pid   — task_loop.sh
 #   ~/pids/stream.pid  — stream_dual.sh (only if stream keys configured)
 #
-# Usage: ./watchdog.sh
+# Usage: ZAI_API_KEY="..." ./watchdog.sh
+#
+# Environment:
+#   ZAI_API_KEY       — Required for task_loop restart
+#   CHECK_INTERVAL    — Seconds between checks (default: 15)
 
+ZAI_API_KEY="${ZAI_API_KEY:-}"
 PID_DIR="${HOME}/pids"
 CHECK_INTERVAL="${CHECK_INTERVAL:-15}"
 
@@ -34,7 +39,8 @@ restart_relay() {
 
 restart_tasks() {
   log "Starting task_loop.sh"
-  nohup bash ~/task_loop.sh > ~/logs/task_loop.log 2>&1 &
+  nohup bash -c "export ZAI_API_KEY='${ZAI_API_KEY:-}' && bash ~/task_loop.sh" \
+    > ~/logs/task_loop.log 2>&1 &
   echo $! > "${PID_DIR}/tasks.pid"
   log "tasks PID: $(cat "${PID_DIR}/tasks.pid")"
 }
