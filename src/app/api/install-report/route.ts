@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 
-const GITHUB_TOKEN = process.env.AGENTREEL_GITHUB_TOKEN;
+const GITHUB_TOKEN = process.env.AGENTREEL_GITHUB_ISSUE_WRITE_TOKEN;
 const GITHUB_REPO = "Jiansen/agentreel";
 
 export async function POST(request: NextRequest) {
