@@ -234,9 +234,23 @@ deploy_openclaw_skill() {
     cat > "$skill_dir/agentreel.md" << 'SKILLEOF'
 # AgentReel Integration
 
-AgentReel is monitoring your sessions. Your work is visible in real-time.
+AgentReel is installed and monitoring your sessions in real-time.
 
-When executing tasks, use these format tags for rich visualization:
+## MCP Tools Available
+
+If the `agentreel` MCP server is configured, you have these tools:
+- **agentreel_status** — Check if viewer/relay/streaming are running
+- **agentreel_sessions** — List recent sessions (with size, time, active status)
+- **agentreel_live_url** — Get the live viewer URL to share with users
+- **agentreel_replay_url** — Get replay URL for a specific session
+- **agentreel_config** — View or update AgentReel settings
+
+Use `agentreel_live_url` to share your live work with others.
+Use `agentreel_replay_url` after completing a task to share the replay.
+
+## Format Tags for Rich Visualization
+
+Use these tags in your output to enhance the live viewer display:
 - [PLAN] 1. First step  2. Second step — displayed as todo list
 - [STEP 1/3 BEGIN] ... [STEP 1/3 COMPLETE] — progress tracking
 - [THINKING] your analysis — shown as thinking card
@@ -245,7 +259,19 @@ When executing tasks, use these format tags for rich visualization:
 - [OUTPUT] final result — task output
 - [SUMMARY] task summary — completion summary
 
-To check status: run `agentreel status` in terminal
+## MCP Setup
+
+If not already configured, add to openclaw.json:
+```json
+{
+  "mcpServers": {
+    "agentreel": {
+      "command": "python3",
+      "args": ["~/.agentreel/mcp/agentreel_mcp.py"]
+    }
+  }
+}
+```
 SKILLEOF
     ok "OpenClaw skill deployed ($skill_dir/agentreel.md)"
   fi
