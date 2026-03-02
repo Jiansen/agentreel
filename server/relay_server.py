@@ -25,6 +25,7 @@ import time
 import uuid
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from socketserver import ThreadingMixIn
 from pathlib import Path
 from threading import Lock, Thread
 
@@ -556,7 +557,10 @@ def main():
     poll_thread = Thread(target=poll_loop, args=(args.watch_dir,), daemon=True)
     poll_thread.start()
 
-    server = HTTPServer(("0.0.0.0", args.port), RelayHandler)
+    class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
+        daemon_threads = True
+
+    server = ThreadedHTTPServer(("0.0.0.0", args.port), RelayHandler)
     print(f"[relay] SSE server on http://0.0.0.0:{args.port}")
     print("[relay] Endpoints: /api/stream (SSE), /api/events (JSON), /api/status, /health")
     print(f"[relay] Transcript upload: POST /api/transcript  |  GET /api/transcripts")
