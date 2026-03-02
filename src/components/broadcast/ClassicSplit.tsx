@@ -6,6 +6,9 @@ import AgentTerminal from "./AgentTerminal";
 import MissionBar from "./MissionBar";
 import TodoList from "./TodoList";
 import StreamCards from "./StreamCards";
+import OutputPanel from "./OutputPanel";
+import MessagePanel from "./MessagePanel";
+import TabCycler from "./TabCycler";
 import QRFooter from "./QRFooter";
 import Watermark from "./Watermark";
 
@@ -16,7 +19,13 @@ interface ClassicSplitProps {
   tabIntervalMs?: number;
 }
 
-export default function ClassicSplit({ data, vncUrl, rawLines = [] }: ClassicSplitProps) {
+export default function ClassicSplit({ data, vncUrl, rawLines = [], tabIntervalMs = 10000 }: ClassicSplitProps) {
+  const tabs = [
+    { label: "Stream", content: <StreamCards events={data.events} /> },
+    { label: "Output", content: <OutputPanel outputs={data.outputs} /> },
+    { label: "Messages", content: <MessagePanel messages={data.messages} /> },
+  ];
+
   return (
     <div className="flex w-full h-full bg-[var(--bg-primary)]">
       {/* Left 70%: Agent Browser (top 65%) + Agent Terminal (bottom 35%) */}
@@ -28,7 +37,7 @@ export default function ClassicSplit({ data, vncUrl, rawLines = [] }: ClassicSpl
         <Watermark />
       </div>
 
-      {/* Right 30%: Mission + TodoList + Stream + QR */}
+      {/* Right 30%: Mission + TodoList + Tabs (Stream/Output/Messages) + QR */}
       <div className="w-[30%] flex flex-col bg-[var(--bg-secondary)] border-l border-[var(--border)]">
         <MissionBar
           missionName={data.missionName}
@@ -39,13 +48,8 @@ export default function ClassicSplit({ data, vncUrl, rawLines = [] }: ClassicSpl
         <div className="shrink-0 max-h-[30%] overflow-y-auto">
           <TodoList plan={data.plan} />
         </div>
-        <div className="flex items-center gap-1.5 px-2.5 py-1 border-y border-[var(--border)] shrink-0">
-          <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-red)] animate-pulse" />
-          <span className="text-[8px] font-bold text-[var(--accent-red)] uppercase tracking-widest">Stream</span>
-          <span className="text-[10px] font-bold text-[var(--text-muted)] ml-auto">AgentReel</span>
-        </div>
         <div className="flex-1 overflow-hidden">
-          <StreamCards events={data.events} />
+          <TabCycler tabs={tabs} intervalMs={tabIntervalMs} />
         </div>
         <QRFooter />
       </div>
