@@ -261,6 +261,7 @@ usage() {
   echo "  start           Start viewer + relay server"
   echo "  stop            Stop all AgentReel services"
   echo "  status          Show service status"
+  echo "  doctor          Full system health check"
   echo "  config          Show or set configuration"
   echo "  install stream  Install streaming module (VNC + ffmpeg)"
   echo "  stream          Start RTMP streaming to YouTube/Twitch"
@@ -454,10 +455,226 @@ cmd_update() {
   echo "  ✓ Updated to latest version"
 }
 
+cmd_doctor() {
+  local pass=0 warn_count=0 fail_count=0 total=0
+  local report_lines=""
+  local DOCTOR_REPORT_URL="https://agentreel.agent-status.com/api/install-report"
+
+  _check() {
+    local status="$1" label="$2" detail="$3"
+    total=$(( total + 1 ))
+    case "$status" in
+      PASS) pass=$(( pass + 1 )); echo "  ✅ $label  $detail" ;;
+      WARN) warn_count=$(( warn_count + 1 )); echo "  ⚠️  $label  $detail" ;;
+      FAIL) fail_count=$(( fail_count + 1 )); echo "  ❌ $label  $detail" ;;
+    esac
+    report_lines="${report_lines}${status}|${label}|${detail}\n"
+  }
+
+  _suggest() { echo "     → $1"; }
+
+  echo ""
+  echo "AgentReel Doctor — Full System Check"
+  echo "═══════════════════════════════════════"
+  echo ""
+
+  # 1. Build
+  if [ -f "$AGENTREEL_DIR/.next/standalone/server.js" ]; then
+    _check PASS "Build" ".next/standalone/server.js present"
+  elif [ -f "$AGENTREEL_DIR/.next/BUILD_ID" ]; then
+    _check WARN "Build" ".next/BUILD_ID present but no standalone build"
+    _suggest "Run: cd $AGENTREEL_DIR && npx next build"
+  else
+    _check FAIL "Build" "No build found in $AGENTREEL_DIR/.next/"
+    _suggest "Run: cd $AGENTREEL_DIR && npm install && npx next build"
+  fi
+
+  # 2. Viewer process
+  local viewer_ok=false
+  if [ -f "$AGENTREEL_DIR/pids/viewer.pid" ]; then
+    local vpid
+    vpid=$(cat "$AGENTREEL_DIR/pids/viewer.pid")
+    if kill -0 "$vpid" 2>/dev/null; then
+      local vport="${AGENTREEL_PORT:-3000}"
+      if curl -sf "http://localhost:$vport" >/dev/null 2>&1; then
+        _check PASS "Viewer" "running (PID $vpid), http://localhost:$vport responds"
+        viewer_ok=true
+      else
+        _check WARN "Viewer" "process running (PID $vpid) but HTTP not responding"
+        _suggest "Check logs: tail $AGENTREEL_DIR/logs/viewer.log"
+      fi
+    else
+      _check FAIL "Viewer" "PID file exists but process not running"
+      _suggest "Run: agentreel start"
+    fi
+  else
+    _check FAIL "Viewer" "not running (no PID file)"
+    _suggest "Run: agentreel start"
+  fi
+
+  # 3. Relay process
+  local relay_ok=false
+  if [ -f "$AGENTREEL_DIR/pids/relay.pid" ]; then
+    local rpid
+    rpid=$(cat "$AGENTREEL_DIR/pids/relay.pid")
+    if kill -0 "$rpid" 2>/dev/null; then
+      local rport="${AGENTREEL_RELAY_PORT:-8765}"
+      if curl -sf "http://localhost:$rport/health" >/dev/null 2>&1; then
+        _check PASS "Relay" "running (PID $rpid), http://localhost:$rport responds"
+        relay_ok=true
+      else
+        _check WARN "Relay" "process running (PID $rpid) but /health not responding"
+        _suggest "Check logs: tail $AGENTREEL_DIR/logs/relay.log"
+      fi
+    else
+      _check FAIL "Relay" "PID file exists but process not running"
+      _suggest "Run: agentreel start"
+    fi
+  else
+    _check FAIL "Relay" "not running (no PID file)"
+    _suggest "Run: agentreel start"
+  fi
+
+  # 4. Sessions directory
+  local watch_dir="${AGENTREEL_WATCH_DIR:-$HOME/.openclaw/agents/main/sessions/}"
+  if [ -d "$watch_dir" ]; then
+    local file_count
+    file_count=$(find "$watch_dir" -maxdepth 2 -name "*.jsonl" -type f 2>/dev/null | wc -l | tr -d ' ')
+    if [ "$file_count" -gt 0 ]; then
+      local latest
+      latest=$(find "$watch_dir" -maxdepth 2 -name "*.jsonl" -type f -printf '%T@ %p\n' 2>/dev/null \
+        | sort -rn | head -1 | cut -d' ' -f2- 2>/dev/null || \
+        find "$watch_dir" -maxdepth 2 -name "*.jsonl" -type f -exec ls -t {} + 2>/dev/null | head -1)
+      local latest_name
+      latest_name=$(basename "$latest" 2>/dev/null || echo "unknown")
+      _check PASS "Sessions" "$watch_dir ($file_count sessions, latest: $latest_name)"
+    else
+      _check WARN "Sessions" "$watch_dir exists but no .jsonl files yet"
+      _suggest "Send a task to your AI agent to generate sessions"
+    fi
+  else
+    _check WARN "Sessions" "watch dir not found: $watch_dir"
+    _suggest "Install OpenClaw or set AGENTREEL_WATCH_DIR"
+  fi
+
+  # 5. OpenClaw
+  if command -v openclaw &>/dev/null; then
+    local gw_running=false
+    if pgrep -f "openclaw.*gateway" >/dev/null 2>&1 || \
+       systemctl is-active openclaw-gateway >/dev/null 2>&1; then
+      gw_running=true
+    fi
+    if [ "$gw_running" = true ]; then
+      _check PASS "OpenClaw" "installed, gateway running"
+    else
+      _check WARN "OpenClaw" "installed but gateway not running"
+      _suggest "Start it: openclaw gateway start (or systemctl start openclaw-gateway)"
+    fi
+  else
+    _check WARN "OpenClaw" "not installed (optional)"
+    _suggest "Install: curl -fsSL https://openclaw.ai/install.sh | bash"
+  fi
+
+  # 6. Ports
+  local vport="${AGENTREEL_PORT:-3000}"
+  local rport="${AGENTREEL_RELAY_PORT:-8765}"
+  if (echo >/dev/tcp/127.0.0.1/"$vport") 2>/dev/null; then
+    if [ "$viewer_ok" = true ]; then
+      _check PASS "Port $vport" "in use by AgentReel viewer"
+    else
+      _check WARN "Port $vport" "in use by another process"
+      _suggest "Check: lsof -i :$vport | head -5"
+    fi
+  else
+    if [ "$viewer_ok" = true ]; then
+      _check WARN "Port $vport" "viewer running but port not responding"
+    else
+      _check PASS "Port $vport" "available"
+    fi
+  fi
+  if (echo >/dev/tcp/127.0.0.1/"$rport") 2>/dev/null; then
+    if [ "$relay_ok" = true ]; then
+      _check PASS "Port $rport" "in use by AgentReel relay"
+    else
+      _check WARN "Port $rport" "in use by another process"
+      _suggest "Check: lsof -i :$rport | head -5"
+    fi
+  else
+    if [ "$relay_ok" = true ]; then
+      _check WARN "Port $rport" "relay running but port not responding"
+    else
+      _check PASS "Port $rport" "available"
+    fi
+  fi
+
+  # 7. Skill
+  local skill_path="$HOME/.openclaw/skills/agentreel/SKILL.md"
+  if [ -f "$skill_path" ]; then
+    _check PASS "Skill" "$skill_path present"
+  elif [ -d "$HOME/.openclaw" ]; then
+    _check WARN "Skill" "OpenClaw found but skill not deployed"
+    _suggest "Run: agentreel update (redeploys skill) or copy manually"
+  else
+    _check PASS "Skill" "skipped (no OpenClaw)"
+  fi
+
+  # 8. Config
+  if [ -f "$CONFIG_FILE" ]; then
+    _check PASS "Config" "$CONFIG_FILE present"
+  else
+    _check WARN "Config" "no config file (using defaults)"
+    _suggest "Create one: agentreel config set port $vport"
+  fi
+
+  # Summary
+  echo ""
+  echo "═══════════════════════════════════════"
+  echo "  Result: $pass passed, $warn_count warnings, $fail_count failed (of $total checks)"
+
+  if [ "$fail_count" -gt 0 ]; then
+    echo ""
+    echo "  Some checks failed. Fix the issues above, then run: agentreel doctor"
+    echo ""
+    echo "  Submit diagnostic report to GitHub?"
+    echo "    agentreel doctor --report"
+  fi
+  echo ""
+
+  # --report flag: submit to GitHub via webhook
+  if [ "${1:-}" = "--report" ]; then
+    echo "  Submitting diagnostic report..."
+    local doc_report
+    doc_report=$(cat <<DOCEOF
+{
+  "version": "doctor-1.0",
+  "type": "doctor",
+  "os": "$(uname -srm)",
+  "node": "$(node -v 2>/dev/null || echo 'N/A')",
+  "python": "$(python3 -V 2>&1 2>/dev/null || echo 'N/A')",
+  "result": "pass=${pass},warn=${warn_count},fail=${fail_count}",
+  "checks": "$(echo -e "$report_lines" | sed 's/"/\\"/g' | tr '\n' ';')",
+  "has_openclaw": $(command -v openclaw &>/dev/null && echo "true" || echo "false"),
+  "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date -u +"%Y-%m-%dT%H:%M:%S")"
+}
+DOCEOF
+)
+    if curl -sf -X POST -H "Content-Type: application/json" \
+         -d "$doc_report" "$DOCTOR_REPORT_URL" >/dev/null 2>&1; then
+      echo "  ✅ Report submitted — check https://github.com/Jiansen/agentreel/issues"
+    else
+      echo "  ⚠️  Report submission failed (network issue or endpoint down)"
+    fi
+    echo ""
+  fi
+
+  return "$fail_count"
+}
+
 case "${1:-help}" in
   start)   cmd_start ;;
   stop)    cmd_stop ;;
   status)  cmd_status ;;
+  doctor)  shift; cmd_doctor "$@" ;;
   config)  shift; cmd_config "$@" ;;
   install) shift; case "${1:-}" in stream) cmd_install_stream ;; *) usage ;; esac ;;
   stream)  cmd_stream ;;
@@ -481,6 +698,8 @@ CLIEOF
   ok "CLI installed: agentreel"
 }
 
+VIEWER_VERIFIED="false"
+
 verify_install() {
   log "Verifying installation..."
   cd "$INSTALL_DIR"
@@ -500,6 +719,7 @@ verify_install() {
 
   if curl -sf "http://localhost:$PORT" > /dev/null 2>&1; then
     ok "Viewer responding on http://localhost:$PORT ($server_cmd)"
+    VIEWER_VERIFIED="true"
     kill $VIEWER_PID 2>/dev/null
     wait $VIEWER_PID 2>/dev/null || true
     return 0
@@ -552,42 +772,143 @@ REPORTEOF
     "$REPORT_URL" >/dev/null 2>&1 || true
 }
 
-print_success() {
+print_acceptance_report() {
   local duration=$(( $(date +%s) - START_TIME ))
+  local has_standalone=false has_build=false has_relay=false has_openclaw=false has_skill=false
+  local viewer_verified="${VIEWER_VERIFIED:-false}"
+
+  [ -f "$INSTALL_DIR/.next/standalone/server.js" ] && has_standalone=true
+  [ -f "$INSTALL_DIR/.next/BUILD_ID" ] && has_build=true
+  [ -f "$INSTALL_DIR/server/relay_server.py" ] && command -v python3 &>/dev/null && has_relay=true
+  command -v openclaw &>/dev/null && has_openclaw=true
+  [ -f "$HOME/.openclaw/skills/agentreel/SKILL.md" ] && has_skill=true
+
   echo ""
-  echo -e "${GREEN}${BOLD}  ✅ AgentReel installed successfully! (${duration}s)${NC}"
-  echo ""
-  echo "  Quick start:"
-  echo "    agentreel start        Start viewer + relay"
-  echo "    agentreel stop         Stop services"
-  echo "    agentreel config       Show/set configuration"
-  echo "    agentreel help         All commands"
-  echo ""
-  echo "  Optional streaming (Linux only):"
-  echo "    agentreel install stream   Install VNC + ffmpeg"
-  echo "    agentreel stream           Push to YouTube/Twitch"
-  echo ""
-  echo "  View at: http://localhost:${PORT}"
-  echo "  Docs:    https://github.com/Jiansen/agentreel"
-  echo ""
-  if command -v openclaw &>/dev/null; then
-    echo -e "  ${CYAN}OpenClaw detected! Try this:${NC}"
-    echo "    1. Run: agentreel start"
-    echo "    2. Send a message to your OpenClaw agent (via Telegram or CLI)"
-    echo "    3. Watch it appear live at http://localhost:${PORT}/live"
-    echo ""
+  echo -e "${BOLD}${CYAN}"
+  echo "  ╔═══════════════════════════════════════════╗"
+  echo "  ║      AgentReel Installation Report        ║"
+  echo "  ╚═══════════════════════════════════════════╝"
+  echo -e "${NC}"
+
+  echo -e "  ${BOLD}Core Components${NC}"
+  if [ "$has_standalone" = true ]; then
+    echo -e "    ${GREEN}✓${NC} Viewer (Next.js standalone)     installed"
+  elif [ "$has_build" = true ]; then
+    echo -e "    ${GREEN}✓${NC} Viewer (Next.js)                installed"
   else
-    echo "  To see live agent activity, install OpenClaw first:"
-    echo "    curl -fsSL https://openclaw.ai/install.sh | bash"
-    echo ""
+    echo -e "    ${RED}✗${NC} Viewer                           build failed"
   fi
+  if [ "$has_relay" = true ]; then
+    echo -e "    ${GREEN}✓${NC} Relay Server (Python SSE)       installed"
+  else
+    echo -e "    ${YELLOW}–${NC} Relay Server                     skipped (needs Python 3.10+)"
+  fi
+  echo -e "    ${GREEN}✓${NC} CLI (agentreel)                  installed"
+
+  echo ""
+  echo -e "  ${BOLD}Integration${NC}"
+  if [ "$has_skill" = true ]; then
+    echo -e "    ${GREEN}✓${NC} OpenClaw Skill                   deployed"
+  elif [ "$has_openclaw" = true ]; then
+    echo -e "    ${YELLOW}–${NC} OpenClaw Skill                   deploy failed"
+  else
+    echo -e "    ${YELLOW}–${NC} OpenClaw Skill                   skipped (OpenClaw not found)"
+  fi
+  echo -e "    ${YELLOW}–${NC} MCP Server                       available (manual: mcp/agentreel_mcp.py)"
+
+  echo ""
+  echo -e "  ${BOLD}Optional Modules${NC}"
+  if command -v ffmpeg &>/dev/null && command -v Xvnc &>/dev/null; then
+    echo -e "    ${GREEN}✓${NC} Streaming (VNC + ffmpeg)         installed"
+  else
+    echo -e "    ${YELLOW}–${NC} Streaming (VNC + ffmpeg)         not installed"
+    echo "       → Install: agentreel install stream"
+  fi
+
+  echo ""
+  echo -e "  ${BOLD}Verification${NC}"
+  if [ "$viewer_verified" = true ]; then
+    echo -e "    ${GREEN}✓${NC} Viewer HTTP check                passed"
+  else
+    echo -e "    ${YELLOW}–${NC} Viewer HTTP check                skipped or failed"
+  fi
+  echo "       → Full check: agentreel doctor"
+
+  echo ""
+  echo -e "  ${BOLD}Configuration${NC}"
+  echo "    Install dir:   $INSTALL_DIR"
+  echo "    Viewer port:   $PORT"
+  echo "    Relay port:    ${AGENTREEL_RELAY_PORT:-8765}"
+  echo "    Watch dir:     ${AGENTREEL_WATCH_DIR:-~/.openclaw/agents/main/sessions/}"
+  echo "    Config file:   $INSTALL_DIR/.agentreel-config.json"
+
+  echo ""
+  echo -e "  ${BOLD}Next Steps${NC}"
+  echo "    1. agentreel start              Start viewer + relay"
+  echo "    2. agentreel doctor             Verify everything works"
+  if [ "$has_openclaw" = true ]; then
+    echo "    3. Send a task to your agent    Watch at http://localhost:${PORT}/live"
+  else
+    echo "    3. Install OpenClaw             curl -fsSL https://openclaw.ai/install.sh | bash"
+    echo "    4. Send a task to your agent    Watch at http://localhost:${PORT}/live"
+  fi
+  echo ""
+  echo "  Docs: https://github.com/Jiansen/agentreel"
+
+  echo ""
+  echo -e "  ${GREEN}${BOLD}✅ Installation completed in ${duration}s${NC}"
+
   if ! echo "$PATH" | grep -q "$HOME/.local/bin"; then
-    echo -e "  ${YELLOW}Note: Run 'source ~/.bashrc' or restart your shell to use 'agentreel' command${NC}"
     echo ""
+    echo -e "  ${YELLOW}Note: Run 'source ~/.bashrc' or restart your shell to use 'agentreel' command${NC}"
   fi
+  echo ""
+}
+
+notify_agent_start() {
+  echo ""
+  echo "---AGENTREEL_INSTALL_START---"
+  echo "AgentReel installation starting on $(uname -srm)."
+  echo "Installer v${VERSION}. This may take 1-3 minutes."
+  echo "Steps: Node.js → Python → git → clone → npm install → build → CLI → verify"
+  echo "---AGENTREEL_INSTALL_START_END---"
+  echo ""
+}
+
+notify_agent_end() {
+  local duration=$(( $(date +%s) - START_TIME ))
+  local result="SUCCESS"
+  [ -n "$FAILED_STEP" ] && result="FAILED at $FAILED_STEP"
+
+  local components="viewer"
+  command -v python3 &>/dev/null && [ -f "$INSTALL_DIR/server/relay_server.py" ] && components="$components, relay"
+  components="$components, cli"
+  command -v openclaw &>/dev/null && [ -f "$HOME/.openclaw/skills/agentreel/SKILL.md" ] && components="$components, openclaw-skill"
+
+  echo ""
+  echo "---AGENTREEL_INSTALL_DONE---"
+  echo "Result: $result (${duration}s)"
+  echo "Components: $components"
+  echo "Port: $PORT"
+  if [ "$result" = "SUCCESS" ]; then
+    echo "Quick start: agentreel start && agentreel doctor"
+    echo "Live URL: http://localhost:${PORT}/live"
+  else
+    echo "Error: ${ERROR_MSG}"
+    echo "Retry: curl -fsSL https://agentreel.agent-status.com/install.sh | bash"
+    echo "Debug: agentreel doctor --report"
+  fi
+  echo "---AGENTREEL_INSTALL_DONE_END---"
+  echo ""
+}
+
+print_success() {
+  notify_agent_end
+  print_acceptance_report
 }
 
 print_failure() {
+  notify_agent_end
   local duration=$(( $(date +%s) - START_TIME ))
   echo ""
   echo -e "${RED}${BOLD}  ❌ Installation failed at step: ${FAILED_STEP} (${duration}s)${NC}"
@@ -597,14 +918,14 @@ print_failure() {
   echo "    1. Fix the error above"
   echo "    2. Re-run: curl -fsSL https://agentreel.agent-status.com/install.sh | bash"
   echo ""
-  echo "  Or ask your AI agent:"
-  echo "    Install AgentReel by following https://agentreel.agent-status.com/api/install"
+  echo "  Debug: agentreel doctor --report"
   echo ""
 }
 
 # === MAIN ===
 
 banner
+notify_agent_start
 detect_os
 
 log "Step 1/6: Checking Node.js..."

@@ -20,11 +20,27 @@ viewer is running, then share both the local URL and the online viewer URL.
 
 ## Commands (use via exec)
 
-- `agentreel status` — check if viewer and relay are running, get live URL
-- `agentreel config` — show all configuration
-- `agentreel config set <key> <value>` — update a setting
 - `agentreel start` — start the viewer and relay server
 - `agentreel stop` — stop all AgentReel services
+- `agentreel status` — check if viewer and relay are running, get live URL
+- `agentreel doctor` — full health check (viewer, relay, sessions, ports, OpenClaw)
+- `agentreel doctor --report` — run health check and submit results to GitHub Issues
+- `agentreel config` — show all configuration
+- `agentreel config set <key> <value>` — update a setting
+- `agentreel update` — pull latest code and rebuild
+
+## Troubleshooting
+
+When something isn't working, follow this sequence:
+
+1. Run `agentreel doctor` — it checks 8 areas and gives specific fix suggestions
+2. Follow the suggestions in the doctor output to fix issues
+3. If fixes don't work, run `agentreel doctor --report` to submit a diagnostic report
+4. Common issues:
+   - **Viewer not running**: `agentreel start`
+   - **Port conflict**: `agentreel config set port 3001` then `agentreel start`
+   - **No sessions visible**: check the watch directory exists: `ls ~/.openclaw/agents/main/sessions/`
+   - **Relay not starting**: ensure Python 3.10+ is installed: `python3 --version`
 
 ## Format Tags
 
