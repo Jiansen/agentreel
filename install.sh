@@ -301,7 +301,15 @@ cmd_start() {
 
   # Viewer (Next.js)
   cd "$AGENTREEL_DIR"
-  if [ -f ".next/BUILD_ID" ]; then
+  if [ -f ".next/standalone/server.js" ]; then
+    # Standalone mode: copy static assets then use node directly
+    cp -r .next/static .next/standalone/.next/static 2>/dev/null || true
+    cp -r public .next/standalone/public 2>/dev/null || true
+    PORT="$port" HOSTNAME="0.0.0.0" nohup node .next/standalone/server.js \
+      > "$AGENTREEL_DIR/logs/viewer.log" 2>&1 &
+    echo $! > "$AGENTREEL_DIR/pids/viewer.pid"
+    echo "  Viewer: http://localhost:${port}"
+  elif [ -f ".next/BUILD_ID" ]; then
     PORT="$port" nohup npx next start -p "$port" \
       > "$AGENTREEL_DIR/logs/viewer.log" 2>&1 &
     echo $! > "$AGENTREEL_DIR/pids/viewer.pid"
@@ -464,17 +472,26 @@ verify_install() {
   log "Verifying installation..."
   cd "$INSTALL_DIR"
 
-  PORT=$PORT npx next start -p "$PORT" &
+  local server_cmd
+  if [ -f ".next/standalone/server.js" ]; then
+    cp -r .next/static .next/standalone/.next/static 2>/dev/null || true
+    cp -r public .next/standalone/public 2>/dev/null || true
+    PORT=$PORT HOSTNAME=0.0.0.0 node .next/standalone/server.js &
+    server_cmd="standalone"
+  else
+    PORT=$PORT npx next start -p "$PORT" &
+    server_cmd="next start"
+  fi
   local VIEWER_PID=$!
   sleep 5
 
   if curl -sf "http://localhost:$PORT" > /dev/null 2>&1; then
-    ok "Viewer responding on http://localhost:$PORT"
+    ok "Viewer responding on http://localhost:$PORT ($server_cmd)"
     kill $VIEWER_PID 2>/dev/null
     wait $VIEWER_PID 2>/dev/null || true
     return 0
   else
-    warn "Viewer didn't start (this might be a build issue, try: agentreel start)"
+    warn "Viewer didn't respond (try: agentreel start)"
     kill $VIEWER_PID 2>/dev/null
     wait $VIEWER_PID 2>/dev/null || true
     return 0
