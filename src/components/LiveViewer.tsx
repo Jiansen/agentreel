@@ -185,16 +185,38 @@ export default function LiveViewer() {
           </p>
         )}
 
+        {connState === "connected" && rawLines.length === 0 && (
+          <div className="mt-6 p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-400" />
+              </span>
+              <span className="text-sm text-green-400 font-medium">
+                Connected — waiting for agent activity
+              </span>
+            </div>
+            <p className="text-xs text-[var(--text-muted)]">
+              Send a task to your OpenClaw agent (via Telegram or CLI) and it
+              will appear here automatically.
+            </p>
+            <pre className="mt-2 text-xs font-mono text-[var(--text-secondary)] bg-[var(--bg-tertiary)] p-2 rounded-lg">
+              {`openclaw agent --session-id demo --message "What's trending on HN?"`}
+            </pre>
+          </div>
+        )}
+
         <div className="mt-8 text-center">
           <p className="text-xs text-[var(--text-muted)] mb-4">
             How to set up a relay server:
           </p>
           <pre className="text-left p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)] text-xs font-mono text-[var(--text-secondary)] overflow-x-auto">
-{`# On the machine running OpenClaw:
-python3 relay_server.py --watch-dir ~/.openclaw/sessions/ --port 8765
+{`# Install AgentReel (includes relay server):
+curl -fsSL https://raw.githubusercontent.com/Jiansen/agentreel/main/install.sh | bash
+agentreel start
 
-# Then connect from this page:
-# http://your-server:8765`}
+# Or manually:
+python3 relay_server.py --watch-dir ~/.openclaw/sessions/ --port 8765`}
           </pre>
         </div>
       </div>
