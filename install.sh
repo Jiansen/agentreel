@@ -220,6 +220,11 @@ build_app() {
   npx next build 2>&1 | tail -5
   if [ -f ".next/BUILD_ID" ]; then
     ok "Build complete"
+    if [ -f ".next/standalone/server.js" ]; then
+      cp -r .next/static .next/standalone/.next/static 2>/dev/null || true
+      cp -r public .next/standalone/public 2>/dev/null || true
+      ok "Static assets copied to standalone"
+    fi
   else
     fail "Build failed"
     FAILED_STEP="build"; ERROR_MSG="next build failed"

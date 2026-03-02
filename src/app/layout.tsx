@@ -70,8 +70,12 @@ export default function RootLayout({
       </head>
       <body className="antialiased">
         {children}
-        <Analytics />
-        <SpeedInsights />
+        {process.env.VERCEL === "1" && (
+          <>
+            <Analytics />
+            <SpeedInsights />
+          </>
+        )}
       </body>
     </html>
   );
