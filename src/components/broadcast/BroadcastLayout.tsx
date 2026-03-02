@@ -116,7 +116,7 @@ export default function BroadcastLayout({
     <ClassicSplit
       data={displayData}
       vncUrl={vncUrl}
-      rawLines={rawLinesRef.current}
+      rawLines={[...rawLinesRef.current]}
       tabIntervalMs={tabIntervalMs}
     />
   );
