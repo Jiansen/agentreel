@@ -121,6 +121,35 @@ The relay server auto-detects new session files and starts streaming them.
 
 For a full 24/7 streaming setup (VNC desktop → YouTube/Twitch), see the **[deploy/](deploy/)** directory. It includes server provisioning, task automation, RTMP streaming, process monitoring, and a one-command `go_live.sh` startup script.
 
+## OpenClaw Integration
+
+AgentReel ships a proper [OpenClaw skill](https://docs.openclaw.ai/tools/skills) that teaches your agent how to use AgentReel and format its output for the live viewer.
+
+**After installation**, the skill is auto-deployed to `~/.openclaw/skills/agentreel/SKILL.md` with `requires.bins=["agentreel"]` gating — it only activates when `agentreel` is on PATH.
+
+The skill teaches the agent:
+- CLI commands (`agentreel status`, `agentreel config`, etc.)
+- Format tags (`[PLAN]`, `[STEP]`, `[THINKING]`, `[DISCOVERY]`, etc.) that render as interactive UI elements in the live viewer
+
+No additional configuration needed — OpenClaw auto-discovers the skill.
+
+## MCP Server (for Cursor, Claude, etc.)
+
+AgentReel also includes an MCP server for non-OpenClaw AI clients:
+
+```json
+{
+  "mcpServers": {
+    "agentreel": {
+      "command": "python3",
+      "args": ["~/.agentreel/mcp/agentreel_mcp.py"]
+    }
+  }
+}
+```
+
+Tools: `agentreel_status`, `agentreel_sessions`, `agentreel_live_url`, `agentreel_replay_url`, `agentreel_config`.
+
 ## Supported Formats
 
 | Format | Status | Notes |
@@ -144,7 +173,7 @@ Three ways to share sessions:
 ```
 agentreel/
   src/
-    app/            # Next.js pages (/, /live, /openclaw-replay, etc.)
+    app/            # Next.js pages (/, /live, /broadcast, /settings, etc.)
     components/     # React components (Viewer, EventCard, LiveViewer, etc.)
     lib/
       parsers/      # Format adapters (openclaw.ts — one per supported format)
@@ -152,6 +181,10 @@ agentreel/
     types/          # Canonical timeline types (TimelineEvent, ParsedSession)
   server/
     relay_server.py # SSE relay for live mode (Python, stdlib only)
+  skills/
+    agentreel/      # OpenClaw skill (SKILL.md with requires.bins gating)
+  mcp/
+    agentreel_mcp.py # MCP server for Cursor/Claude (stdio transport)
   deploy/
     setup_server.sh # Server setup (Node.js, OpenClaw, VNC, ffmpeg, Docker)
     go_live.sh      # One-command 24h live streaming startup
