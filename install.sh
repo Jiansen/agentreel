@@ -54,7 +54,7 @@ banner() {
   echo ""
   echo -e "${BOLD}${CYAN}"
   echo "    ╔═══════════════════════════════════╗"
-  echo "    ║     🦞 AgentReel Installer        ║"
+  echo "    ║     AgentReel Installer            ║"
   echo "    ║     v${VERSION}                        ║"
   echo "    ╚═══════════════════════════════════╝"
   echo -e "${NC}"
@@ -240,7 +240,7 @@ AGENTREEL_DIR="${AGENTREEL_DIR:-$HOME/.agentreel}"
 CONFIG_FILE="$AGENTREEL_DIR/.agentreel-config.json"
 
 usage() {
-  echo "🦞 AgentReel — AI Agent Control Plane"
+  echo "AgentReel — AI Agent Control Plane"
   echo ""
   echo "Usage: agentreel <command> [options]"
   echo ""
@@ -276,7 +276,7 @@ cmd_start() {
   relay_port=$(find_port "${AGENTREEL_RELAY_PORT:-8765}")
   local watch_dir="${AGENTREEL_WATCH_DIR:-$HOME/.openclaw/agents/main/sessions/}"
 
-  echo "🦞 Starting AgentReel..."
+  echo "Starting AgentReel..."
 
   mkdir -p "$AGENTREEL_DIR/logs" "$AGENTREEL_DIR/pids"
 
@@ -339,7 +339,7 @@ cmd_stop() {
 }
 
 cmd_status() {
-  echo "🦞 AgentReel Status"
+  echo "AgentReel Status"
   for pidfile in "$AGENTREEL_DIR/pids/"*.pid; do
     [ -f "$pidfile" ] || continue
     name=$(basename "$pidfile" .pid)
