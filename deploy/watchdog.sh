@@ -121,7 +121,7 @@ restart_stream() {
   source ~/stream.env 2>/dev/null || true
 
   local ffmpeg_count
-  ffmpeg_count=$(pgrep -c ffmpeg 2>/dev/null || echo 0)
+  ffmpeg_count=$(pgrep -c -x ffmpeg 2>/dev/null) || ffmpeg_count=0
   if (( ffmpeg_count > 0 )); then
     log "Killing $ffmpeg_count stale ffmpeg process(es)"
     killall -9 ffmpeg 2>/dev/null || true
@@ -151,7 +151,7 @@ check_relay_health() {
 check_ffmpeg_health() {
   if ! is_alive stream; then return 1; fi
   local ffmpeg_count
-  ffmpeg_count=$(pgrep -c ffmpeg 2>/dev/null || echo 0)
+  ffmpeg_count=$(pgrep -c -x ffmpeg 2>/dev/null) || ffmpeg_count=0
   if (( ffmpeg_count > 1 )); then
     log "Multiple ffmpeg ($ffmpeg_count) — killing all and restarting"
     killall -9 ffmpeg 2>/dev/null || true
