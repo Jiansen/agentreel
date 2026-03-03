@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
       error = "none",
       has_openclaw = false,
       agent = "unknown",
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       public_ip = "",
       components = {},
     } = report;

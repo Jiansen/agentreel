@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface DropZoneProps {
@@ -65,7 +66,7 @@ export default function DropZone({ onFileLoaded }: DropZoneProps) {
           Replays, highlights, and the fails nobody talks about.
         </p>
         <div className="flex items-center gap-4 mt-3 text-sm">
-          <a href="/" className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">Home</a>
+          <Link href="/" className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">Home</Link>
           <span className="text-[var(--border)]">·</span>
           <a href="https://github.com/Jiansen/agentreel" target="_blank" rel="noopener noreferrer" className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">GitHub</a>
         </div>

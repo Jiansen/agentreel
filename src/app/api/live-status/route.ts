@@ -64,6 +64,7 @@ async function checkTwitch(): Promise<LiveStatus["twitch"]> {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function GET(_request: NextRequest) {
   if (cache && Date.now() - cache.ts < CACHE_TTL) {
     return Response.json(cache.data, {

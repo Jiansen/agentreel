@@ -50,6 +50,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const config = await readConfig();
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { _admin_token: _, ...safeConfig } = config;
     return Response.json(safeConfig);
   } catch {
