@@ -1,0 +1,63 @@
+name: "Share Your Showcase"
+description: "Submit your AgentReel setup to be featured on the homepage"
+title: "[Showcase] "
+labels: ["showcase"]
+body:
+  - type: input
+    id: name
+    attributes:
+      label: "Setup Name"
+      description: "A short name for your setup"
+      placeholder: "e.g. AI Code Reviewer on my homelab"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: "What does your agent do?"
+      description: "1-3 sentences about what your agent works on"
+      placeholder: "My OpenClaw agent reviews PRs and generates test suggestions..."
+    validations:
+      required: true
+
+  - type: input
+    id: video_url
+    attributes:
+      label: "Video URL"
+      description: "YouTube video or channel link (more platforms coming soon)"
+      placeholder: "https://www.youtube.com/watch?v=... or https://www.youtube.com/@..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: "Screenshot (16:9)"
+      description: "Drag and drop a 16:9 screenshot of your agent in action. This will be the thumbnail on the homepage."
+      placeholder: "Drag your screenshot here..."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: framework
+    attributes:
+      label: "Agent Framework"
+      options:
+        - OpenClaw
+        - Cursor
+        - Claude Code
+        - Windsurf
+        - Other
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: "Confirmation"
+      options:
+        - label: "This showcase does not contain sensitive data or credentials"
+          required: true
+        - label: "I consent to this being displayed publicly on the AgentReel homepage"
+          required: true

@@ -1,0 +1,32 @@
+name: "Report a Showcase"
+description: "Flag a showcase for review (inappropriate content, broken link, etc.)"
+title: "[Report] "
+labels: ["report"]
+body:
+  - type: input
+    id: showcase_issue
+    attributes:
+      label: "Which showcase?"
+      description: "Issue number or title of the showcase you're reporting"
+      placeholder: "#42 or 'AI Code Reviewer on my homelab'"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: reason
+    attributes:
+      label: "Reason"
+      options:
+        - Inappropriate or offensive content
+        - Contains credentials or sensitive data
+        - Broken or misleading link
+        - Spam or self-promotion without substance
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: details
+    attributes:
+      label: "Details (optional)"
+      description: "Any additional context"
