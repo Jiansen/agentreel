@@ -220,6 +220,57 @@ except: pass
   fi
 }
 
+# ─── Agent Chrome watchdog ───
+
+AGENT_DISPLAY="${AGENTREEL_DISPLAY:-:99}"
+AGENT_CHROME_DIR="/tmp/chromium-agent"
+
+ensure_agent_chrome() {
+  if curl -sf --max-time 3 "http://127.0.0.1:${CDP_PORT}/json/version" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  log "Agent Chrome not responding on CDP ${CDP_PORT}, restarting..."
+
+  local chromium_cmd=""
+  for cmd in /snap/bin/chromium chromium chromium-browser; do
+    if command -v "$cmd" &>/dev/null; then chromium_cmd="$cmd"; break; fi
+  done
+  [ -z "$chromium_cmd" ] && { log "WARN: no chromium found, skipping"; return 0; }
+
+  mkdir -p "${AGENT_CHROME_DIR}/Default"
+  python3 -c "
+import json
+try:
+    with open('${AGENT_CHROME_DIR}/Default/Preferences', 'r') as f:
+        p = json.load(f)
+    p.setdefault('profile', {})['exit_type'] = 'Normal'
+    p['profile']['exited_cleanly'] = True
+    with open('${AGENT_CHROME_DIR}/Default/Preferences', 'w') as f:
+        json.dump(p, f)
+except: pass
+" 2>/dev/null
+
+  DISPLAY="${AGENT_DISPLAY}" nohup "$chromium_cmd" \
+    --no-sandbox --disable-gpu \
+    --remote-debugging-port="${CDP_PORT}" \
+    --user-data-dir="${AGENT_CHROME_DIR}" \
+    --window-size=1920,1080 \
+    --no-first-run --disable-background-timer-throttling \
+    --disable-session-crashed-bubble --disable-infobars \
+    --disable-notifications --start-maximized \
+    "about:blank" \
+    > /tmp/chromium-agent.log 2>&1 &
+  sleep 5
+  DISPLAY="${AGENT_DISPLAY}" xdotool search --class "Chromium" windowmove 0 0 windowsize 1920 1080 2>/dev/null || true
+
+  if curl -sf --max-time 3 "http://127.0.0.1:${CDP_PORT}/json/version" >/dev/null 2>&1; then
+    log "Agent Chrome restarted on ${AGENT_DISPLAY} (CDP ${CDP_PORT})"
+  else
+    log "WARN: Agent Chrome failed to start"
+  fi
+}
+
 # ─── Task execution ───
 
 INTERRUPT_POLL="${INTERRUPT_POLL:-10}"
@@ -524,6 +575,9 @@ cmd_daemon() {
       wait $! || true
       [ $shutdown_requested -eq 1 ] && break
     fi
+
+    # Ensure agent Chrome is alive before each task
+    ensure_agent_chrome || true
 
     # Execute
     local task_result=0
