@@ -24,10 +24,8 @@ function VncViewerInner() {
 
     (async () => {
       try {
-        const mod = await import(
-          /* webpackIgnore: true */
-          "https://esm.sh/@novnc/novnc@1.5.0/core/rfb.js"
-        );
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const mod = await (Function('return import("https://esm.sh/@novnc/novnc@1.5.0/core/rfb.js")')() as Promise<any>);
         if (cancelled) return;
 
         const RFB = mod.default;

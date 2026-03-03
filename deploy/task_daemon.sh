@@ -530,7 +530,7 @@ cmd_daemon() {
     run_task "$taskfile" || task_result=$?
 
     # Post-task cleanup: close all Chrome tabs except the first (about:blank)
-    cleanup_agent_browser
+    cleanup_agent_browser || true
 
     if [ "$task_result" -eq 3 ]; then
       log "Yielding ${TELEGRAM_YIELD}s after interrupt"
@@ -541,7 +541,7 @@ cmd_daemon() {
     fi
 
     # Periodic housekeeping
-    cleanup_old
+    cleanup_old || true
   done
 
   log "=== Daemon shutting down gracefully ==="
