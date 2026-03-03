@@ -818,6 +818,9 @@ CLIEOF
 
   chmod +x "$HOME/.local/bin/agentreel"
 
+  # Symlink to /usr/local/bin so it works in non-login shells (e.g. agent exec)
+  sudo ln -sf "$HOME/.local/bin/agentreel" /usr/local/bin/agentreel 2>/dev/null || true
+
   if ! echo "$PATH" | grep -q "$HOME/.local/bin"; then
     for rc in "$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.profile"; do
       if [ -f "$rc" ]; then
@@ -988,11 +991,11 @@ print_acceptance_report() {
   pub_ip=$(curl -sf --max-time 3 https://ifconfig.me 2>/dev/null || curl -sf --max-time 3 https://api.ipify.org 2>/dev/null || echo "")
   if [ -n "$pub_ip" ]; then
     echo "    Public:  http://${pub_ip}:${PORT}/live"
-    echo -e "    ${YELLOW}Note: public access requires port ${PORT} open in firewall/security group${NC}"
   else
-    echo "    Public:  (could not detect public IP)"
-    echo "    Tip:     if on a cloud server, open port ${PORT} and use your server's public IP"
+    echo "    Public:  http://<YOUR_SERVER_IP>:${PORT}/live"
   fi
+  echo -e "    ${YELLOW}Note: replace IP/port as needed; port ${PORT} must be open in firewall${NC}"
+  echo "    Help:    https://github.com/Jiansen/agentreel/issues"
 
   echo ""
   echo -e "  ${BOLD}Next Steps${NC}"
@@ -1047,14 +1050,21 @@ notify_agent_end() {
   echo "Port: $PORT"
   if [ "$result" = "SUCCESS" ]; then
     echo "Quick start: agentreel start && agentreel doctor"
-    echo "Local URL: http://localhost:${PORT}/live"
-    [ -n "$pub_ip" ] && echo "Public URL: http://${pub_ip}:${PORT}/live (requires port ${PORT} open in firewall)"
-    [ -n "${ADMIN_TOKEN:-}" ] && echo "Settings: http://localhost:${PORT}/settings (token: ${ADMIN_TOKEN})"
-    echo "IMPORTANT: Save the admin token above — it's needed to access settings."
+    if [ -n "$pub_ip" ]; then
+      echo "Live URL: http://${pub_ip}:${PORT}/live"
+      echo "NOTE: Replace ${pub_ip} with your LAN IP for internal access. Port ${PORT} must be open in firewall/security group."
+    else
+      echo "Live URL: http://<YOUR_SERVER_IP>:${PORT}/live"
+      echo "NOTE: Replace <YOUR_SERVER_IP> with your server's public or LAN IP. Port ${PORT} must be open."
+    fi
+    [ -n "${ADMIN_TOKEN:-}" ] && echo "Settings: http://<YOUR_SERVER_IP>:${PORT}/settings (admin token: ${ADMIN_TOKEN})"
+    echo "IMPORTANT: Save the admin token — it is needed to access settings."
+    echo "Need help? Open an issue: https://github.com/Jiansen/agentreel/issues"
   else
     echo "Error: ${ERROR_MSG}"
     echo "Retry: curl -fsSL https://agentreel.agent-status.com/install.sh | bash"
     echo "Debug: agentreel doctor --report"
+    echo "Need help? https://github.com/Jiansen/agentreel/issues"
   fi
   echo "---AGENTREEL_INSTALL_DONE_END---"
   echo ""
