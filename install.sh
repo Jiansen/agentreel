@@ -431,8 +431,10 @@ cmd_start() {
 
   mkdir -p "$AGENTREEL_DIR/logs" "$AGENTREEL_DIR/pids"
 
-  # Desktop (Xvfb + Chromium)
+  # 1. Desktop — Xvfb only (Chromium needs viewer to be ready, started last)
+  local desktop_enabled=false
   if command -v Xvfb &>/dev/null && [ "${AGENTREEL_NO_DESKTOP:-0}" != "1" ]; then
+    desktop_enabled=true
     if ! pgrep -f "Xvfb ${display_num}" >/dev/null 2>&1; then
       Xvfb "$display_num" -screen 0 "${resolution}x24" &
       echo $! > "$AGENTREEL_DIR/pids/xvfb.pid"
@@ -441,31 +443,11 @@ cmd_start() {
     else
       echo "  Desktop: Xvfb ${display_num} already running"
     fi
-
-    local chromium_cmd=""
-    if command -v chromium &>/dev/null; then chromium_cmd="chromium"
-    elif command -v chromium-browser &>/dev/null; then chromium_cmd="chromium-browser"
-    fi
-
-    if [ -n "$chromium_cmd" ] && ! pgrep -f "chromium.*broadcast" >/dev/null 2>&1; then
-      sleep 2
-      local broadcast_url="http://localhost:${port}/broadcast?preset=landscape&relay=http%3A%2F%2Flocalhost%3A${relay_port}"
-      DISPLAY="$display_num" nohup "$chromium_cmd" \
-        --no-sandbox --disable-gpu \
-        --user-data-dir=/tmp/chromium-bcast \
-        --window-size="${resolution%%x*},${resolution##*x}" \
-        --no-first-run --disable-background-timer-throttling \
-        --disable-session-crashed-bubble --disable-infobars \
-        --disable-notifications --kiosk "$broadcast_url" \
-        > "$AGENTREEL_DIR/logs/chromium.log" 2>&1 &
-      echo $! > "$AGENTREEL_DIR/pids/chromium.pid"
-      echo "  Browser: Chromium kiosk → /broadcast"
-    fi
   else
     echo "  Desktop: skipped (Xvfb not found or disabled)"
   fi
 
-  # Relay server
+  # 2. Relay server
   if command -v python3 &>/dev/null && [ -f "$AGENTREEL_DIR/server/relay_server.py" ]; then
     pkill -f "relay_server.py.*--port $relay_port" 2>/dev/null || true
     sleep 1
@@ -484,7 +466,7 @@ cmd_start() {
     echo "  Relay:  skipped (Python 3.10+ or relay_server.py not found)"
   fi
 
-  # Viewer (Next.js)
+  # 3. Viewer (Next.js)
   cd "$AGENTREEL_DIR"
   if [ -f ".next/BUILD_ID" ]; then
     PORT="$port" nohup npx next start -p "$port" \
@@ -496,6 +478,37 @@ cmd_start() {
       > "$AGENTREEL_DIR/logs/viewer.log" 2>&1 &
     echo $! > "$AGENTREEL_DIR/pids/viewer.pid"
     echo "  Viewer: http://localhost:${port} (dev mode)"
+  fi
+
+  # 4. Chromium — launched AFTER viewer to ensure the page is available
+  if [ "$desktop_enabled" = true ]; then
+    local chromium_cmd=""
+    if command -v chromium &>/dev/null; then chromium_cmd="chromium"
+    elif command -v chromium-browser &>/dev/null; then chromium_cmd="chromium-browser"
+    fi
+
+    if [ -n "$chromium_cmd" ] && ! pgrep -f "chromium.*broadcast" >/dev/null 2>&1; then
+      local tries=0
+      while [ $tries -lt 15 ]; do
+        if curl -sf --max-time 2 "http://localhost:${port}/" >/dev/null 2>&1; then
+          break
+        fi
+        tries=$(( tries + 1 ))
+        sleep 2
+      done
+
+      local broadcast_url="http://localhost:${port}/broadcast?preset=landscape&relay=http%3A%2F%2Flocalhost%3A${relay_port}"
+      DISPLAY="$display_num" nohup "$chromium_cmd" \
+        --no-sandbox --disable-gpu \
+        --user-data-dir=/tmp/chromium-bcast \
+        --window-size="${resolution%%x*},${resolution##*x}" \
+        --no-first-run --disable-background-timer-throttling \
+        --disable-session-crashed-bubble --disable-infobars \
+        --disable-notifications --kiosk "$broadcast_url" \
+        > "$AGENTREEL_DIR/logs/chromium.log" 2>&1 &
+      echo $! > "$AGENTREEL_DIR/pids/chromium.pid"
+      echo "  Browser: Chromium kiosk → /broadcast"
+    fi
   fi
 
   echo ""
@@ -1110,13 +1123,38 @@ notify_agent_end() {
   echo ""
 }
 
+write_install_result() {
+  mkdir -p "$HOME/.agentreel"
+  local duration=$(( $(date +%s) - START_TIME ))
+  local result="SUCCESS"
+  [ -n "$FAILED_STEP" ] && result="FAILED at $FAILED_STEP"
+  local components="viewer"
+  command -v python3 &>/dev/null && [ -f "$INSTALL_DIR/server/relay_server.py" ] && components="$components, relay"
+  components="$components, cli"
+  command -v openclaw &>/dev/null && [ -f "$HOME/.openclaw/skills/agentreel/SKILL.md" ] && components="$components, openclaw-skill"
+  local pub_ip
+  pub_ip=$(curl -sf --max-time 3 https://ifconfig.me 2>/dev/null || echo "")
+
+  cat > "$HOME/.agentreel/.install-result" << RESULT_EOF
+timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+result=${result}
+version=${VERSION}
+duration=${duration}
+port=${PORT:-$DEFAULT_PORT}
+components=${components}
+public_ip=${pub_ip}
+RESULT_EOF
+}
+
 print_success() {
   notify_agent_end
+  write_install_result
   print_acceptance_report
 }
 
 print_failure() {
   notify_agent_end
+  write_install_result
   local duration=$(( $(date +%s) - START_TIME ))
   echo ""
   echo -e "${RED}${BOLD}  ❌ Installation failed at step: ${FAILED_STEP} (${duration}s)${NC}"

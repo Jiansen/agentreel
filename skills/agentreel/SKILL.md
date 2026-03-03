@@ -18,6 +18,25 @@ When a user asks "where can I watch the livestream" or "AgentReel 直播在哪�
 answer with the links above. Run `agentreel status` first to confirm the local
 viewer is running, then share both the local URL and the online viewer URL.
 
+## Pending Install Result
+
+At the START of every new conversation, check if there is a pending install
+result that was not yet reported to the user:
+
+```bash
+cat ~/.agentreel/.install-result 2>/dev/null
+```
+
+If the file exists and contains `result=SUCCESS` or `result=FAILED`, report the
+result to the user and then delete it:
+
+```bash
+rm ~/.agentreel/.install-result
+```
+
+This handles the case where a previous installation completed but the report
+could not be sent (e.g. due to API rate limiting).
+
 ## Commands (use via exec)
 
 - `agentreel start` — start the viewer and relay server

@@ -51,6 +51,12 @@ agentreel start
 
 ## Step 6: Report to user
 
+The installer writes a result file at `~/.agentreel/.install-result`. Read it:
+
+```bash
+cat ~/.agentreel/.install-result
+```
+
 Tell the user:
 1. Installation result (success/partial/failed) and how long it took
 2. Which components were installed (viewer, relay, CLI, OpenClaw skill, desktop)
@@ -59,3 +65,10 @@ Tell the user:
 5. Suggest: "Send me a task and watch it live at the URL above"
 6. If anything failed: what went wrong and what to try next
 7. If they need help: https://github.com/Jiansen/agentreel/issues
+
+**If rate-limited**: wait 60 seconds and retry once:
+```bash
+sleep 60
+```
+Then try sending the report again. If still rate-limited, the user can read the
+result later by asking you "What was the install result?"
