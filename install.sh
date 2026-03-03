@@ -244,6 +244,10 @@ install_desktop() {
   check_command Xvfb  || pkgs_needed="$pkgs_needed xvfb"
   check_command ffmpeg || pkgs_needed="$pkgs_needed ffmpeg"
   check_command xdotool || pkgs_needed="$pkgs_needed xdotool"
+  check_command x11vnc || pkgs_needed="$pkgs_needed x11vnc"
+  check_command websockify || pkgs_needed="$pkgs_needed websockify"
+  check_command fluxbox || pkgs_needed="$pkgs_needed fluxbox"
+  [ -d /usr/share/novnc ] || pkgs_needed="$pkgs_needed novnc"
 
   if [ -n "$pkgs_needed" ]; then
     sudo apt-get update -qq 2>/dev/null
@@ -560,6 +564,23 @@ cmd_start() {
 
         # Configure OpenClaw visible profile
         setup_openclaw_visible_profile "$cdp_port"
+      fi
+
+      # 4a.2 x11vnc + websockify (bridge agent display to browser VNC)
+      if command -v x11vnc &>/dev/null; then
+        if ! pgrep -f "x11vnc.*display ${display_num}" >/dev/null 2>&1; then
+          x11vnc -display "$display_num" -rfbport 5999 -nopw -shared -forever -bg \
+            > "$AGENTREEL_DIR/logs/x11vnc.log" 2>&1 || true
+          echo "  x11vnc: capturing ${display_num} → rfbport 5999"
+        fi
+      fi
+      if command -v websockify &>/dev/null; then
+        if ! pgrep -f "websockify.*${vnc_port}" >/dev/null 2>&1; then
+          nohup websockify --web /usr/share/novnc "$vnc_port" localhost:5999 \
+            > "$AGENTREEL_DIR/logs/websockify.log" 2>&1 &
+          echo $! > "$AGENTREEL_DIR/pids/websockify.pid"
+          echo "  websockify: ws://localhost:${vnc_port}"
+        fi
       fi
 
       # 4b. Kiosk Chrome on broadcast display
