@@ -18,17 +18,14 @@ function VncViewerInner() {
 
     const wsUrl = `ws://${host}:${port}/${path}`;
     let cancelled = false;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let rfb: any = null;
+    let rfb: import("@novnc/novnc/lib/rfb.js").default | null = null;
 
     (async () => {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any, no-new-func
-        const mod: any = await new Function(`return import("https://esm.sh/@novnc/novnc@1.5.0/core/rfb.js")`)();
+        const { default: RFB } = await import("@novnc/novnc/lib/rfb.js");
         if (cancelled) return;
 
-        const RFB = mod.default;
-        rfb = new RFB(containerRef.current, wsUrl, {});
+        rfb = new RFB(containerRef.current!, wsUrl, {});
         rfb.viewOnly = false;
         rfb.scaleViewport = true;
         rfb.resizeSession = false;

@@ -45,14 +45,15 @@ export default function BroadcastClient() {
         if (data.available) {
           const host = window.location.hostname;
           const viewerPort = window.location.port || "3000";
-          if (data.proxyPath) {
+          const isLocal = host === "localhost" || host === "127.0.0.1";
+          if (isLocal && data.path) {
+            setDetectedVncUrl(`http://${host}:${data.port}${data.path}`);
+          } else if (data.proxyPath) {
             setDetectedVncUrl(
               `/vnc-viewer?host=${host}&port=${viewerPort}&path=${encodeURIComponent(data.proxyPath.slice(1))}`
             );
           } else {
-            setDetectedVncUrl(
-              `http://${host}:${data.port}${data.path}`
-            );
+            setDetectedVncUrl(`http://${host}:${data.port}${data.path}`);
           }
         }
       })
