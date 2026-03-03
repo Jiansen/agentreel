@@ -13,7 +13,7 @@ set -euo pipefail
 #   AGENTREEL_NO_BUILD  Skip npm build if set to 1
 #   AGENTREEL_TELEMETRY Set to "off" to disable anonymous install report
 
-VERSION="1.0.0"
+VERSION="2026.3.3"
 REPO="https://github.com/Jiansen/agentreel.git"
 INSTALL_DIR="${AGENTREEL_DIR:-$HOME/.agentreel}"
 DEFAULT_PORT="${AGENTREEL_PORT:-3000}"
@@ -381,8 +381,12 @@ check_update() {
   fi
 }
 
+cmd_version() {
+  echo "agentreel v$(get_local_version)"
+}
+
 usage() {
-  echo "AgentReel — AI Agent Control Plane"
+  echo "AgentReel v$(get_local_version) — AI Agent Control Plane"
   echo ""
   echo "Usage: agentreel <command> [options]"
   echo ""
@@ -395,6 +399,7 @@ usage() {
   echo "  install stream  Install streaming module (VNC + ffmpeg)"
   echo "  stream          Start RTMP streaming to YouTube/Twitch"
   echo "  update          Update to latest version"
+  echo "  version         Show version"
   echo "  help            Show this help"
   echo ""
   echo "Config: $CONFIG_FILE"
@@ -846,6 +851,7 @@ case "${1:-help}" in
   install) shift; case "${1:-}" in stream) cmd_install_stream ;; *) usage ;; esac ;;
   stream)  cmd_stream ;;
   update)  cmd_update ;;
+  version|-v|--version) cmd_version ;;
   help|*)  usage ;;
 esac
 CLIEOF
