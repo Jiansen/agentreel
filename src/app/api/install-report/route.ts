@@ -3,6 +3,15 @@ import { NextRequest } from "next/server";
 const GITHUB_TOKEN = process.env.AGENTREEL_GITHUB_ISSUE_WRITE_TOKEN;
 const GITHUB_REPO = "Jiansen/agentreel";
 
+function osLabel(os: string): string {
+  const lower = os.toLowerCase();
+  if (lower.includes("ubuntu") || lower.includes("debian")) return "linux-debian";
+  if (lower.includes("centos") || lower.includes("rhel") || lower.includes("fedora")) return "linux-rhel";
+  if (lower.includes("linux")) return "linux";
+  if (lower.includes("darwin") || lower.includes("macos") || lower.includes("mac")) return "macos";
+  return "os-other";
+}
+
 export async function POST(request: NextRequest) {
   try {
     const report = await request.json();
@@ -17,30 +26,70 @@ export async function POST(request: NextRequest) {
       failed_step = "none",
       error = "none",
       has_openclaw = false,
+      agent = "unknown",
+      public_ip = "",
+      components = {},
     } = report;
 
-    const labels = ["install-report"];
-    if (result === "failed") labels.push("bug");
+    const emoji = result === "success" ? "✅" : result === "failed" ? "❌" : "⚠️";
+    const osShort = os.split(" ")[0];
 
-    const title = `Install ${result}: ${os.split(" ")[0]} / Node ${node} (${duration_s}s)`;
+    const labels = ["install-report", osLabel(os)];
+    if (result === "failed") labels.push("bug");
+    if (result === "success") labels.push("install-success");
+    if (has_openclaw) labels.push("has-openclaw");
+    if (agent && agent !== "unknown" && agent !== "human") labels.push("agent-installed");
+
+    const title = `${emoji} Install ${result}: ${osShort} / Node ${node} (${duration_s}s)`;
+
+    const componentLines = typeof components === "object" && components !== null
+      ? Object.entries(components)
+          .map(([k, v]) => `| ${k} | ${v ? "✓" : "✗"} |`)
+          .join("\n")
+      : "| (none reported) | — |";
+
     const body = [
       `### Install Report`,
       ``,
       `| Field | Value |`,
       `|-------|-------|`,
-      `| **Result** | ${result} |`,
+      `| **Result** | ${emoji} ${result} |`,
       `| **OS** | ${os} |`,
       `| **Node** | ${node} |`,
       `| **Python** | ${python} |`,
       `| **npm** | ${report.npm || "N/A"} |`,
       `| **OpenClaw** | ${has_openclaw ? "Yes" : "No"} |`,
+      `| **Installer** | ${agent} |`,
       `| **Duration** | ${duration_s}s |`,
       `| **Version** | ${version} |`,
-      `| **Failed Step** | ${failed_step} |`,
-      `| **Error** | ${error} |`,
-      `| **Timestamp** | ${report.timestamp || "N/A"} |`,
       ``,
-      `*Automated install report. No PII collected.*`,
+      `### Components`,
+      ``,
+      `| Component | Status |`,
+      `|-----------|--------|`,
+      componentLines,
+      ``,
+      ...(result === "failed"
+        ? [
+            `### Failure Details`,
+            ``,
+            `| Field | Value |`,
+            `|-------|-------|`,
+            `| **Failed Step** | ${failed_step} |`,
+            `| **Error** | \`${error}\` |`,
+            ``,
+          ]
+        : []),
+      `<details>`,
+      `<summary>Raw report JSON</summary>`,
+      ``,
+      "```json",
+      JSON.stringify(report, null, 2),
+      "```",
+      `</details>`,
+      ``,
+      `---`,
+      `*Automated install report. No PII collected. Timestamp: ${report.timestamp || "N/A"}*`,
     ].join("\n");
 
     if (GITHUB_TOKEN) {
@@ -73,7 +122,10 @@ export async function POST(request: NextRequest) {
     }
 
     console.log("[install-report]", JSON.stringify(report));
-    return Response.json({ ok: true, note: "Logged (no GitHub token configured)" });
+    return Response.json({
+      ok: true,
+      note: "Logged (no GitHub token configured)",
+    });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Invalid request";
     return Response.json({ ok: false, error: msg }, { status: 400 });

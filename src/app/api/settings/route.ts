@@ -6,14 +6,18 @@ import { homedir } from "os";
 const CONFIG_DIR = join(homedir(), ".agentreel");
 const CONFIG_FILE = join(CONFIG_DIR, "config.json");
 
-async function getAdminToken(): Promise<string | null> {
+async function readConfig(): Promise<Record<string, string>> {
   try {
     const data = await readFile(CONFIG_FILE, "utf-8");
-    const config = JSON.parse(data);
-    return config._admin_token || null;
+    return JSON.parse(data);
   } catch {
-    return null;
+    return {};
   }
+}
+
+async function getAdminToken(): Promise<string | null> {
+  const config = await readConfig();
+  return config._admin_token || null;
 }
 
 function isAuthorized(request: NextRequest, token: string | null): boolean {
@@ -36,14 +40,16 @@ export async function GET(request: NextRequest) {
   const token = await getAdminToken();
   if (!isAuthorized(request, token)) {
     return Response.json(
-      { error: "Unauthorized. Provide admin token via Bearer header or cookie." },
+      {
+        error:
+          "Unauthorized. Provide admin token via Bearer header or cookie.",
+      },
       { status: 401 }
     );
   }
 
   try {
-    const data = await readFile(CONFIG_FILE, "utf-8");
-    const config = JSON.parse(data);
+    const config = await readConfig();
     const { _admin_token: _, ...safeConfig } = config;
     return Response.json(safeConfig);
   } catch {
@@ -55,7 +61,10 @@ export async function POST(request: NextRequest) {
   const token = await getAdminToken();
   if (!isAuthorized(request, token)) {
     return Response.json(
-      { error: "Unauthorized. Provide admin token via Bearer header or cookie." },
+      {
+        error:
+          "Unauthorized. Provide admin token via Bearer header or cookie.",
+      },
       { status: 401 }
     );
   }
@@ -70,13 +79,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    let existing: Record<string, string> = {};
-    try {
-      const data = await readFile(CONFIG_FILE, "utf-8");
-      existing = JSON.parse(data);
-    } catch { /* first save */ }
+    const existing = await readConfig();
 
-    if (existing._admin_token) {
+    // Allow explicit admin token change; otherwise preserve existing
+    if (safeConfig._admin_token) {
+      // User explicitly set a new admin token — use it
+    } else if (existing._admin_token) {
       safeConfig._admin_token = existing._admin_token;
     }
 

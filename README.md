@@ -32,48 +32,35 @@ Currently supports **OpenClaw** transcripts (v3 + legacy). More formats coming s
 
 ## Quick Start
 
+### AI Agent Install (Recommended)
+
+Have an AI agent (OpenClaw, Cursor, etc.)? Send it this one message:
+
+```
+Read https://raw.githubusercontent.com/Jiansen/agentreel/main/AGENT_INSTALL.md and follow every step. Report the result when done.
+```
+
+The agent installs AgentReel, runs diagnostics, starts services, and reports back — typically in 3-5 minutes.
+
 ### One-Line Install
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Jiansen/agentreel/main/install.sh | bash
 ```
 
-This installs the viewer + relay server, creates the `agentreel` CLI, and auto-detects your OpenClaw sessions.
-
 ```bash
 agentreel start     # Start viewer + relay
 agentreel status    # Check service status
 agentreel stop      # Stop services
+agentreel doctor    # Verify installation
 agentreel help      # All commands
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to view replays, or [http://localhost:3000/live](http://localhost:3000/live) for real-time agent activity.
-
-### AI Agent Install (OpenClaw, Cursor, etc.)
-
-Have an AI agent? Send it this one message:
-
-```
-Read https://raw.githubusercontent.com/Jiansen/agentreel/main/AGENT_INSTALL.md and follow every step. Report the result when done.
-```
-
-The agent will install AgentReel, run diagnostics, start services, and report back — typically in 3-5 minutes.
-
-<details>
-<summary>Or use the one-line install command directly</summary>
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/Jiansen/agentreel/main/install.sh | bash
-agentreel doctor   # verify installation
-agentreel start    # start viewer + relay
-```
-</details>
+Open [http://localhost:3000/live](http://localhost:3000/live) for real-time agent activity.
 
 ### Use Online (no install)
 
-Visit **[agentreel.agent-status.com](https://agentreel.agent-status.com)** and drop your OpenClaw JSONL file.
-
-Try the demo: [agentreel.agent-status.com/?demo](https://agentreel.agent-status.com/?demo)
+Visit **[agentreel.agent-status.com](https://agentreel.agent-status.com)** and drop your OpenClaw JSONL file, or try the [live demo](https://agentreel.agent-status.com/?demo).
 
 ### Manual Install
 
@@ -83,8 +70,6 @@ cd agentreel
 npm install
 npm run dev
 ```
-
-Open [http://localhost:3000](http://localhost:3000).
 
 ## Live Mode
 
@@ -202,7 +187,7 @@ agentreel/
   deploy/
     setup_server.sh # Server setup (Node.js, OpenClaw, VNC, ffmpeg, Docker)
     go_live.sh      # One-command 24h live streaming startup
-    task_loop.sh    # Continuous agent task generation (customizable)
+    task_loop.sh    # Config-driven agent task loop (loads from JSON)
     stream_dual.sh  # RTMP dual-stream to YouTube + Twitch
     setup_desktop.sh# VNC desktop layout (terminal + browser split)
     watchdog.sh     # Process monitor with auto-restart

@@ -1,0 +1,28 @@
+{
+  "description": "Example task config for AgentReel task loop. Customize tasks for your use case.",
+  "format_instructions": "FORMAT REQUIREMENTS: [PLAN] 1. Navigate to ... [STEP 1/N BEGIN] ... [STEP 1/N COMPLETE] ... Use [THINKING] for analysis, [DISCOVERY] for findings, [OUTPUT] for results, [SUMMARY] for conclusion.",
+  "rotation": [1, 1, 2],
+  "defaults": {
+    "timeout": 300,
+    "pause": 180,
+    "max_failures": 3,
+    "cooldown": 600
+  },
+  "tiers": {
+    "1": [
+      {
+        "id": "web-research",
+        "label": "Web Research",
+        "message": "Browse Hacker News and find the top 5 stories about AI. For each: title, points, and a one-sentence summary."
+      }
+    ],
+    "2": [
+      {
+        "id": "code-task",
+        "label": "Build Script",
+        "timeout": 600,
+        "message": "Write a Python script that prints 'Hello from AgentReel!' and saves it to ~/outputs/hello.py"
+      }
+    ]
+  }
+}
