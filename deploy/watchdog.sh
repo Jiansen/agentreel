@@ -167,7 +167,7 @@ check_ffmpeg_health() {
 
 # --- Main ---
 acquire_lock
-mkdir -p "$PID_DIR" ~/logs
+mkdir -p "$PID_DIR" "${AGENTREEL_DIR}/logs" ~/logs
 log "=== Watchdog v2 started (PID $$, check every ${CHECK_INTERVAL}s) ==="
 
 while true; do
