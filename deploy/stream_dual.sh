@@ -17,7 +17,7 @@ export TZ=UTC
 #
 # At least one platform (YT or TW) must be configured.
 
-DISPLAY_NUM="${DISPLAY_NUM:-:1}"
+DISPLAY_NUM="${DISPLAY_NUM:-:99}"
 RESOLUTION="${RESOLUTION:-1920x1080}"
 FPS="${FPS:-30}"
 BITRATE="${BITRATE:-2500k}"
@@ -25,7 +25,7 @@ RESTART_DELAY="${RESTART_DELAY:-10}"
 RECORD_LOCAL="${RECORD_LOCAL:-false}"
 RECORDINGS_DIR="${RECORDINGS_DIR:-$HOME/recordings}"
 
-log() { echo "[stream] $(date +"%Y-%m-%dT%H:%M:%SZ") $*"; }
+log() { echo >&2 "[stream] $(date +"%Y-%m-%dT%H:%M:%SZ") $*"; }
 
 build_tee_output() {
   local outputs="" count=0
@@ -68,6 +68,7 @@ run_stream() {
   ffmpeg \
     -f x11grab -video_size "${RESOLUTION}" -framerate "${FPS}" -i "${DISPLAY_NUM}" \
     -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 \
+    -map 0:v -map 1:a \
     -c:v libx264 -preset veryfast -tune zerolatency \
     -maxrate "${BITRATE}" -bufsize "$((${BITRATE%k} * 2))k" \
     -pix_fmt yuv420p -g $((FPS * 2)) \
