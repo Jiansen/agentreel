@@ -4,22 +4,23 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "AgentReel — Beautiful Replay Viewer for AI Agent Sessions",
+  title: "AgentReel — Watch AI Agents Work in Real-Time",
   description:
-    "Drag & drop your OpenClaw JSONL transcript to instantly replay, explore, and share your AI agent's work. Zero install, zero config.",
+    "Install in 3 minutes. Give your AI agent a task. Watch it work live — tool calls, reasoning, and results streaming in real-time.",
   keywords: [
-    "OpenClaw",
-    "replay viewer",
     "AI agent",
-    "transcript viewer",
+    "live viewer",
+    "OpenClaw",
+    "agent streaming",
+    "real-time",
     "JSONL viewer",
     "agent session replay",
   ],
   metadataBase: new URL("https://agentreel.agent-status.com"),
   openGraph: {
-    title: "AgentReel — See Your Agent's Work, Beautifully",
+    title: "AgentReel — Watch AI Agents Work in Real-Time",
     description:
-      "Drag & drop OpenClaw transcripts. Instant timeline replay. One-click sharing.",
+      "Install. Give your agent a task. Watch it work live. Tool calls, browsing, reasoning — all streaming in real-time.",
     type: "website",
     siteName: "AgentReel",
     url: "https://agentreel.agent-status.com",
@@ -28,7 +29,7 @@ export const metadata: Metadata = {
         url: "/og-image.png",
         width: 1280,
         height: 640,
-        alt: "AgentReel — AI Agent Session Replay",
+        alt: "AgentReel — Watch AI Agents Work in Real-Time",
       },
     ],
   },
@@ -36,9 +37,9 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     site: "@agent_reel",
     creator: "@he_jiansen",
-    title: "AgentReel — Beautiful Replay Viewer for AI Agent Sessions",
+    title: "AgentReel — Watch AI Agents Work in Real-Time",
     description:
-      "Watch AI agents work. Replays, highlights, and the fails nobody talks about.",
+      "Install in 3 minutes. Give your agent a task. Watch it work live.",
   },
   icons: {
     icon: [

@@ -81,9 +81,9 @@ export default function LandingPage() {
             </h1>
           </div>
           <p className="text-[var(--text-secondary)] text-lg max-w-lg">
-            Watch AI agents work in real-time.
+            Install in 3 minutes. Give your agent a task.
             <br />
-            Replays, highlights, and the fails nobody talks about.
+            Watch it work live — browsing, coding, reasoning.
           </p>
         </motion.div>
 
@@ -190,7 +190,7 @@ export default function LandingPage() {
           </p>
         </motion.div>
 
-        {/* Demo + Install CTAs */}
+        {/* CTAs */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -212,6 +212,83 @@ export default function LandingPage() {
             >
               Install →
             </a>
+          </div>
+        </motion.div>
+
+        {/* How it works */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+          className="mt-12 w-full max-w-lg"
+        >
+          <h2 className="text-center text-sm font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-6">
+            How it works
+          </h2>
+          <div className="grid grid-cols-3 gap-4 text-center">
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-10 h-10 rounded-full bg-[var(--bg-secondary)] border border-[var(--border)] flex items-center justify-center text-lg">
+                1
+              </div>
+              <p className="text-xs text-[var(--text-secondary)]">
+                Install with one command
+              </p>
+              <code className="text-[10px] text-[var(--accent-cyan)] bg-[var(--bg-secondary)] px-2 py-0.5 rounded">
+                curl ... | bash
+              </code>
+            </div>
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-10 h-10 rounded-full bg-[var(--bg-secondary)] border border-[var(--border)] flex items-center justify-center text-lg">
+                2
+              </div>
+              <p className="text-xs text-[var(--text-secondary)]">
+                Give your agent a task
+              </p>
+              <code className="text-[10px] text-[var(--accent-cyan)] bg-[var(--bg-secondary)] px-2 py-0.5 rounded">
+                via Telegram / CLI
+              </code>
+            </div>
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-10 h-10 rounded-full bg-[var(--bg-secondary)] border border-[var(--border)] flex items-center justify-center text-lg">
+                3
+              </div>
+              <p className="text-xs text-[var(--text-secondary)]">
+                Watch it work live
+              </p>
+              <code className="text-[10px] text-[var(--accent-cyan)] bg-[var(--bg-secondary)] px-2 py-0.5 rounded">
+                localhost:3000/live
+              </code>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* What you see */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.6 }}
+          className="mt-10 w-full max-w-lg"
+        >
+          <div className="grid grid-cols-2 gap-3 text-xs">
+            {[
+              ["🌐", "Agent Browser", "Watch your agent navigate the web"],
+              ["📝", "Tool Calls", "See every action as it happens"],
+              ["🧠", "Reasoning", "Follow the agent's thinking process"],
+              ["📊", "Task Progress", "Track steps, discoveries, outputs"],
+            ].map(([icon, title, desc]) => (
+              <div
+                key={title}
+                className="flex items-start gap-2 p-3 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)]"
+              >
+                <span className="text-base">{icon}</span>
+                <div>
+                  <p className="font-medium text-[var(--text-primary)]">
+                    {title}
+                  </p>
+                  <p className="text-[var(--text-muted)]">{desc}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </motion.div>
       </main>
