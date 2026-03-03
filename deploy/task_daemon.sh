@@ -186,16 +186,23 @@ CDP_PORT="${AGENTREEL_CDP_PORT:-18802}"
 
 cleanup_agent_browser() {
   local cdp="http://127.0.0.1:${CDP_PORT}"
-  local tabs
-  tabs=$(curl -sf --max-time 5 "${cdp}/json/list" 2>/dev/null) || return 0
+
+  curl -sf --max-time 5 "${cdp}/json/version" >/dev/null 2>&1 || return 0
+
+  curl -sf --max-time 3 "${cdp}/json/new?about:blank" >/dev/null 2>&1
+
   local tab_ids
-  tab_ids=$(echo "$tabs" | python3 -c "
+  tab_ids=$(curl -sf --max-time 5 "${cdp}/json/list" 2>/dev/null | python3 -c "
 import json, sys
 try:
     tabs = json.load(sys.stdin)
+    blank_kept = False
     for t in tabs:
         url = t.get('url', '')
-        if url != 'about:blank' and t.get('type') == 'page':
+        if url == 'about:blank' and not blank_kept:
+            blank_kept = True
+            continue
+        if t.get('type') == 'page':
             print(t['id'])
 except: pass
 " 2>/dev/null) || return 0
@@ -205,10 +212,11 @@ except: pass
     [ -z "$tab_id" ] && continue
     curl -sf --max-time 3 "${cdp}/json/close/${tab_id}" >/dev/null 2>&1 || true
     (( count++ )) || true
+    sleep 0.2
   done <<< "$tab_ids"
 
   if [ "$count" -gt 0 ]; then
-    log "Cleanup: closed $count browser tab(s)"
+    log "Cleanup: closed $count browser tab(s), kept 1 blank tab"
   fi
 }
 
