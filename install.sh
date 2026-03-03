@@ -357,6 +357,30 @@ set -euo pipefail
 AGENTREEL_DIR="${AGENTREEL_DIR:-$HOME/.agentreel}"
 CONFIG_FILE="$AGENTREEL_DIR/.agentreel-config.json"
 
+get_local_version() {
+  if [ -f "$AGENTREEL_DIR/VERSION" ]; then
+    cat "$AGENTREEL_DIR/VERSION" | tr -d '[:space:]'
+  elif [ -f "$AGENTREEL_DIR/package.json" ]; then
+    python3 -c "import json; print(json.load(open('$AGENTREEL_DIR/package.json'))['version'])" 2>/dev/null || echo "unknown"
+  else
+    echo "unknown"
+  fi
+}
+
+check_update() {
+  local current
+  current=$(get_local_version)
+  [ "$current" = "unknown" ] && return 0
+
+  local latest
+  latest=$(curl -sf --max-time 3 "https://raw.githubusercontent.com/Jiansen/agentreel/main/VERSION" 2>/dev/null | tr -d '[:space:]') || return 0
+  [ -z "$latest" ] && return 0
+
+  if [ "$current" != "$latest" ]; then
+    echo "  update available: v${latest} (current: v${current}). Run: agentreel update"
+  fi
+}
+
 usage() {
   echo "AgentReel — AI Agent Control Plane"
   echo ""
@@ -397,7 +421,8 @@ cmd_start() {
   local display_num="${AGENTREEL_DISPLAY:-:99}"
   local resolution="${AGENTREEL_RESOLUTION:-1920x1080}"
 
-  echo "Starting AgentReel..."
+  echo "Starting AgentReel (v$(get_local_version))..."
+  check_update
 
   mkdir -p "$AGENTREEL_DIR/logs" "$AGENTREEL_DIR/pids"
 
@@ -583,12 +608,20 @@ cmd_stream() {
 }
 
 cmd_update() {
-  echo "Updating AgentReel..."
+  local old_ver
+  old_ver=$(get_local_version)
+  echo "Updating AgentReel (current: v${old_ver})..."
   cd "$AGENTREEL_DIR"
   git pull --ff-only
   npm install 2>&1 | tail -3
   npx next build 2>&1 | tail -3
-  echo "  ✓ Updated to latest version"
+  local new_ver
+  new_ver=$(get_local_version)
+  if [ "$old_ver" = "$new_ver" ]; then
+    echo "  ✓ Already up to date (v${new_ver})"
+  else
+    echo "  ✓ Updated: v${old_ver} → v${new_ver}"
+  fi
 }
 
 cmd_doctor() {
@@ -610,7 +643,8 @@ cmd_doctor() {
   _suggest() { echo "     → $1"; }
 
   echo ""
-  echo "AgentReel Doctor — Full System Check"
+  echo "AgentReel Doctor v$(get_local_version) — Full System Check"
+  check_update
   echo "═══════════════════════════════════════"
   echo ""
 
