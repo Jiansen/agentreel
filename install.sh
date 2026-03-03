@@ -518,8 +518,13 @@ cmd_start() {
   fi
   cd "$AGENTREEL_DIR"
   if [ -f ".next/BUILD_ID" ]; then
-    PORT="$port" nohup npx next start -p "$port" \
-      > "$AGENTREEL_DIR/logs/viewer.log" 2>&1 &
+    if [ -f "server.js" ]; then
+      PORT="$port" nohup node server.js \
+        > "$AGENTREEL_DIR/logs/viewer.log" 2>&1 &
+    else
+      PORT="$port" nohup npx next start -p "$port" \
+        > "$AGENTREEL_DIR/logs/viewer.log" 2>&1 &
+    fi
     echo $! > "$AGENTREEL_DIR/pids/viewer.pid"
     echo "  Viewer: http://localhost:${port}"
   else

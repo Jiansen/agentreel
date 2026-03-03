@@ -18,6 +18,7 @@ export async function GET() {
         available: true,
         port: parseInt(wsPort),
         path: "/vnc_clean.html",
+        proxyPath: "/vnc-ws",
       });
     }
   } catch {

@@ -44,9 +44,16 @@ export default function BroadcastClient() {
       .then((data) => {
         if (data.available) {
           const host = window.location.hostname;
-          setDetectedVncUrl(
-            `http://${host}:${data.port}${data.path}`
-          );
+          const viewerPort = window.location.port || "3000";
+          if (data.proxyPath) {
+            setDetectedVncUrl(
+              `/vnc-viewer?host=${host}&port=${viewerPort}&path=${encodeURIComponent(data.proxyPath.slice(1))}`
+            );
+          } else {
+            setDetectedVncUrl(
+              `http://${host}:${data.port}${data.path}`
+            );
+          }
         }
       })
       .catch(() => {});
