@@ -334,7 +334,7 @@ feed_tasks() {
     "hn|Browse Hacker News (news.ycombinator.com) and find today top 5 AI-related stories. For each story note: title, points, comment count, and the source domain.|HN AI Scout|600"
     "gh-trend|Browse GitHub Trending (github.com/trending) and find today's top 5 trending repositories. Use the browser to visit the page and extract: repo name, description, language, and today's star count.|GitHub Trending|600"
     "ph|Browse Product Hunt (producthunt.com) and find today's top 5 trending AI products. For each: name, tagline, upvotes, and a brief assessment of the product.|PH AI Products|600"
-    "reddit|Browse Reddit r/MachineLearning (reddit.com/r/MachineLearning/hot) and find the top 5 hot posts. For each: title, score, comment count, and key discussion points.|Reddit ML Hot|600"
+    "arxiv|Browse arXiv (arxiv.org/list/cs.AI/recent) and find the 5 most interesting recent AI papers. For each: title, authors, abstract summary, and why it matters.|arXiv AI Papers|600"
   )
 
   local review_sites=("cursor.com" "replit.com" "v0.dev" "bolt.new" "lovable.dev" "windsurf.com")
