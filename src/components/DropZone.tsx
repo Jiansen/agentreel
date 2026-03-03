@@ -65,9 +65,9 @@ export default function DropZone({ onFileLoaded }: DropZoneProps) {
           Replays, highlights, and the fails nobody talks about.
         </p>
         <div className="flex items-center gap-4 mt-3 text-sm">
-          <a href="/live" className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">Live</a>
+          <a href="/" className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">Home</a>
           <span className="text-[var(--border)]">·</span>
-          <a href="https://cloud.agentreel.agent-status.com" className="text-[var(--accent-blue)] hover:text-[var(--accent-blue)]/80 transition-colors font-medium">Cloud ↗</a>
+          <a href="https://github.com/Jiansen/agentreel" target="_blank" rel="noopener noreferrer" className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">GitHub</a>
         </div>
       </motion.div>
 
