@@ -1,0 +1,130 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import DropZone from "@/components/DropZone";
+import Viewer from "@/components/Viewer";
+import SideBySideViewer from "@/components/SideBySideViewer";
+import { parseOpenClawJsonl } from "@/lib/parsers/openclaw";
+import { decompressFromUrl } from "@/lib/share";
+import type { ParsedSession } from "@/types/timeline";
+
+export default function ReplayPage() {
+  const [session, setSession] = useState<ParsedSession | null>(null);
+  const [jsonlContent, setJsonlContent] = useState<string>("");
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadContent = useCallback((content: string, source: string) => {
+    try {
+      const parsed = parseOpenClawJsonl(content);
+      setSession(parsed);
+      setJsonlContent(content);
+      setError(null);
+      console.log(
+        `[AgentReel] Loaded ${parsed.events.length} events from ${source}`
+      );
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed to parse file";
+      setError(msg);
+      console.error("[AgentReel] Parse error:", msg);
+    }
+  }, []);
+
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash.startsWith("#d=")) {
+      const encoded = hash.slice(3);
+      const content = decompressFromUrl(encoded);
+      if (content) {
+        loadContent(content, "shared link");
+        return;
+      }
+    }
+
+    const params = new URLSearchParams(window.location.search);
+
+    const video = params.get("video");
+    if (video) setVideoUrl(video);
+
+    const remoteUrl = params.get("url");
+    if (remoteUrl) {
+      fetch(remoteUrl)
+        .then((r) => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return r.text();
+        })
+        .then((content) => loadContent(content, remoteUrl))
+        .catch((e) => {
+          setError(
+            `Failed to load from URL: ${e instanceof Error ? e.message : "unknown error"}`
+          );
+        });
+      return;
+    }
+
+    if (params.has("demo")) {
+      fetch("/demo.jsonl")
+        .then((r) => r.text())
+        .then((content) => loadContent(content, "demo"))
+        .catch(() => {});
+    }
+  }, [loadContent]);
+
+  const handleFileLoaded = useCallback(
+    (content: string, filename: string) => {
+      loadContent(content, filename);
+    },
+    [loadContent]
+  );
+
+  const handleReset = useCallback(() => {
+    setSession(null);
+    setJsonlContent("");
+    setVideoUrl(null);
+    setError(null);
+    if (window.location.hash || window.location.search) {
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+  }, []);
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-8">
+        <div className="max-w-md text-center">
+          <div className="text-4xl mb-4">⚠️</div>
+          <h2 className="text-xl font-semibold mb-2">Parse Error</h2>
+          <p className="text-[var(--text-secondary)] mb-6">{error}</p>
+          <button
+            onClick={handleReset}
+            className="px-4 py-2 rounded-lg bg-[var(--accent-blue)] text-white font-medium hover:bg-[var(--accent-blue)]/80 transition-colors"
+          >
+            Try another file
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (session && videoUrl) {
+    return (
+      <SideBySideViewer
+        session={session}
+        jsonlContent={jsonlContent}
+        videoUrl={videoUrl}
+        onReset={handleReset}
+      />
+    );
+  }
+
+  if (session) {
+    return (
+      <Viewer
+        session={session}
+        jsonlContent={jsonlContent}
+        onReset={handleReset}
+      />
+    );
+  }
+
+  return <DropZone onFileLoaded={handleFileLoaded} />;
+}

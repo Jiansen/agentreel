@@ -43,3 +43,10 @@ __pycache__/
 
 # recordings (local test output)
 recordings/
+
+# dev screenshots and temp assets
+assets/screenshots/
+
+# music source files (keep mp3s local, don't commit)
+deploy/music/*.wav
+deploy/music/*.mp3
