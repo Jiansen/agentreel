@@ -1,14 +1,7 @@
 # AgentReel — Agent Installation Guide
 
 You are an AI agent installing AgentReel. Follow these steps exactly.
-
-## IMPORTANT: Notify user first
-
-Before running any commands, immediately tell the user:
-
-> "Installing AgentReel now. This takes about 3-5 minutes (downloading, building, verifying). I'll report back when it's done."
-
-Do NOT wait silently — the user needs to know the process has started.
+Do NOT stop to ask for confirmation. Notify the user and proceed immediately.
 
 ## Pre-flight
 

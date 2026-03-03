@@ -11,7 +11,7 @@ interface LiveStatus {
 }
 
 const INSTALL_MSG =
-  "Read https://raw.githubusercontent.com/Jiansen/agentreel/main/AGENT_INSTALL.md and follow every step. Notify me before you start and report the result when done.";
+  "Read https://raw.githubusercontent.com/Jiansen/agentreel/main/AGENT_INSTALL.md and follow every step. Tell me when you start and report the result when done.";
 const SHOWCASE_SUBMIT_URL =
   "https://github.com/Jiansen/agentreel/issues/new?template=showcase.yml";
 const SHOWCASE_REPORT_URL =

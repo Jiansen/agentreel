@@ -37,7 +37,7 @@ Currently supports **OpenClaw** transcripts (v3 + legacy). More formats coming s
 Have an AI agent (OpenClaw, Cursor, etc.)? Send it this one message:
 
 ```
-Read https://raw.githubusercontent.com/Jiansen/agentreel/main/AGENT_INSTALL.md and follow every step. Notify me before you start and report the result when done.
+Read https://raw.githubusercontent.com/Jiansen/agentreel/main/AGENT_INSTALL.md and follow every step. Tell me when you start and report the result when done.
 ```
 
 The agent installs AgentReel, runs diagnostics, starts services, and reports back — typically in 3-5 minutes.
