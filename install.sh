@@ -227,6 +227,63 @@ build_app() {
   fi
 }
 
+install_desktop() {
+  if [ "${AGENTREEL_NO_DESKTOP:-0}" = "1" ]; then
+    warn "Skipping desktop (AGENTREEL_NO_DESKTOP=1)"
+    return 0
+  fi
+
+  if [ "$OS" = "macos" ]; then
+    warn "Desktop module not available on macOS (use Screen Sharing or OBS for streaming)"
+    return 0
+  fi
+
+  log "Installing desktop environment (Xvfb + Chromium)..."
+
+  local pkgs_needed=""
+  check_command Xvfb  || pkgs_needed="$pkgs_needed xvfb"
+  check_command ffmpeg || pkgs_needed="$pkgs_needed ffmpeg"
+  check_command xdotool || pkgs_needed="$pkgs_needed xdotool"
+
+  if [ -n "$pkgs_needed" ]; then
+    sudo apt-get update -qq 2>/dev/null
+    # shellcheck disable=SC2086
+    sudo apt-get install -y -qq $pkgs_needed 2>/dev/null
+  fi
+
+  if ! check_command chromium && ! check_command chromium-browser; then
+    if check_command snap; then
+      sudo snap install chromium 2>/dev/null || sudo apt-get install -y -qq chromium-browser 2>/dev/null
+    else
+      sudo apt-get install -y -qq chromium-browser 2>/dev/null
+    fi
+  fi
+
+  local desktop_ok=true
+  if check_command Xvfb; then
+    ok "Xvfb installed"
+  else
+    warn "Xvfb not installed"; desktop_ok=false
+  fi
+  if check_command chromium || check_command chromium-browser; then
+    ok "Chromium installed"
+  else
+    warn "Chromium not installed"; desktop_ok=false
+  fi
+  if check_command ffmpeg; then
+    ok "ffmpeg installed"
+  else
+    warn "ffmpeg not installed (streaming won't work, but live page will)"
+  fi
+
+  if [ "$desktop_ok" = true ]; then
+    ok "Desktop environment ready"
+  else
+    warn "Partial desktop install — /live page may show 'Waiting for VNC'"
+    warn "Fix: sudo apt-get install xvfb chromium-browser"
+  fi
+}
+
 deploy_openclaw_skill() {
   if [ -d "$HOME/.openclaw" ]; then
     local skill_dir="$HOME/.openclaw/skills/agentreel"
@@ -337,10 +394,46 @@ cmd_start() {
   local relay_port
   relay_port=$(find_port "${AGENTREEL_RELAY_PORT:-8765}")
   local watch_dir="${AGENTREEL_WATCH_DIR:-$HOME/.openclaw/agents/main/sessions/}"
+  local display_num="${AGENTREEL_DISPLAY:-:99}"
+  local resolution="${AGENTREEL_RESOLUTION:-1920x1080}"
 
   echo "Starting AgentReel..."
 
   mkdir -p "$AGENTREEL_DIR/logs" "$AGENTREEL_DIR/pids"
+
+  # Desktop (Xvfb + Chromium)
+  if command -v Xvfb &>/dev/null && [ "${AGENTREEL_NO_DESKTOP:-0}" != "1" ]; then
+    if ! pgrep -f "Xvfb ${display_num}" >/dev/null 2>&1; then
+      Xvfb "$display_num" -screen 0 "${resolution}x24" &
+      echo $! > "$AGENTREEL_DIR/pids/xvfb.pid"
+      sleep 1
+      echo "  Desktop: Xvfb ${display_num} (${resolution})"
+    else
+      echo "  Desktop: Xvfb ${display_num} already running"
+    fi
+
+    local chromium_cmd=""
+    if command -v chromium &>/dev/null; then chromium_cmd="chromium"
+    elif command -v chromium-browser &>/dev/null; then chromium_cmd="chromium-browser"
+    fi
+
+    if [ -n "$chromium_cmd" ] && ! pgrep -f "chromium.*broadcast" >/dev/null 2>&1; then
+      sleep 2
+      local broadcast_url="http://localhost:${port}/broadcast?preset=landscape&relay=http%3A%2F%2Flocalhost%3A${relay_port}"
+      DISPLAY="$display_num" nohup "$chromium_cmd" \
+        --no-sandbox --disable-gpu \
+        --user-data-dir=/tmp/chromium-bcast \
+        --window-size="${resolution%%x*},${resolution##*x}" \
+        --no-first-run --disable-background-timer-throttling \
+        --disable-session-crashed-bubble --disable-infobars \
+        --disable-notifications --kiosk "$broadcast_url" \
+        > "$AGENTREEL_DIR/logs/chromium.log" 2>&1 &
+      echo $! > "$AGENTREEL_DIR/pids/chromium.pid"
+      echo "  Browser: Chromium kiosk → /broadcast"
+    fi
+  else
+    echo "  Desktop: skipped (Xvfb not found or disabled)"
+  fi
 
   # Relay server
   if command -v python3 &>/dev/null && [ -f "$AGENTREEL_DIR/server/relay_server.py" ]; then
@@ -376,7 +469,7 @@ cmd_start() {
   fi
 
   echo ""
-  echo "  Live:   http://localhost:${port}/live?stream=http://localhost:${relay_port}"
+  echo "  Live:   http://localhost:${port}/live"
   echo "  Stop:   agentreel stop"
 }
 
@@ -384,11 +477,14 @@ cmd_stop() {
   echo "Stopping AgentReel..."
   for pidfile in "$AGENTREEL_DIR/pids/"*.pid; do
     [ -f "$pidfile" ] || continue
+    local name pid
+    name=$(basename "$pidfile" .pid)
     pid=$(cat "$pidfile")
-    kill "$pid" 2>/dev/null && echo "  Stopped PID $pid" || true
+    kill "$pid" 2>/dev/null && echo "  Stopped $name (PID $pid)" || true
     rm -f "$pidfile"
   done
   pkill -f "relay_server.py" 2>/dev/null || true
+  pkill -f "chromium.*broadcast" 2>/dev/null || true
   echo "Done."
 }
 
@@ -842,12 +938,26 @@ print_acceptance_report() {
   echo -e "    ${YELLOW}–${NC} MCP Server                       available (manual: mcp/agentreel_mcp.py)"
 
   echo ""
-  echo -e "  ${BOLD}Optional Modules${NC}"
-  if command -v ffmpeg &>/dev/null && command -v Xvnc &>/dev/null; then
-    echo -e "    ${GREEN}✓${NC} Streaming (VNC + ffmpeg)         installed"
+  echo -e "  ${BOLD}Desktop${NC}"
+  if command -v Xvfb &>/dev/null; then
+    echo -e "    ${GREEN}✓${NC} Virtual Display (Xvfb)           installed"
   else
-    echo -e "    ${YELLOW}–${NC} Streaming (VNC + ffmpeg)         not installed"
-    echo "       → Install: agentreel install stream"
+    echo -e "    ${YELLOW}–${NC} Virtual Display (Xvfb)           not installed"
+  fi
+  if command -v chromium &>/dev/null || command -v chromium-browser &>/dev/null; then
+    echo -e "    ${GREEN}✓${NC} Chromium                          installed"
+  else
+    echo -e "    ${YELLOW}–${NC} Chromium                          not installed"
+  fi
+
+  echo ""
+  echo -e "  ${BOLD}Optional Modules${NC}"
+  if command -v ffmpeg &>/dev/null; then
+    echo -e "    ${GREEN}✓${NC} Streaming (ffmpeg)               installed"
+    echo "       → Config: agentreel config set youtube_key YOUR_KEY"
+  else
+    echo -e "    ${YELLOW}–${NC} Streaming (ffmpeg)               not installed"
+    echo "       → Install: sudo apt-get install ffmpeg"
   fi
 
   echo ""
@@ -970,29 +1080,42 @@ print_failure() {
   echo ""
 }
 
+# === Parse flags ===
+
+for arg in "$@"; do
+  case "$arg" in
+    --no-desktop)  export AGENTREEL_NO_DESKTOP=1 ;;
+    --no-relay)    export AGENTREEL_NO_RELAY=1 ;;
+    --minimal)     export AGENTREEL_NO_DESKTOP=1; export AGENTREEL_NO_RELAY=1 ;;
+  esac
+done
+
 # === MAIN ===
 
 banner
 notify_agent_start
 detect_os
 
-log "Step 1/6: Checking Node.js..."
+log "Step 1/7: Checking Node.js..."
 install_node || { print_failure; send_report; exit 1; }
 
-log "Step 2/6: Checking Python..."
+log "Step 2/7: Checking Python..."
 install_python
 
-log "Step 3/6: Checking git..."
+log "Step 3/7: Checking git..."
 install_git || { print_failure; send_report; exit 1; }
 
-log "Step 4/6: Cloning repository..."
+log "Step 4/7: Cloning repository..."
 clone_repo || { print_failure; send_report; exit 1; }
 
-log "Step 5/6: Installing dependencies..."
+log "Step 5/7: Installing dependencies..."
 install_deps || { print_failure; send_report; exit 1; }
 
-log "Step 6/6: Building..."
+log "Step 6/7: Building..."
 build_app || { print_failure; send_report; exit 1; }
+
+log "Step 7/7: Desktop environment..."
+install_desktop
 
 create_cli
 deploy_openclaw_skill

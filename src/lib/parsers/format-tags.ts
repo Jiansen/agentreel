@@ -196,12 +196,25 @@ export function extractBroadcastData(
       }
     }
 
-    // Capture incoming user messages as external messages
+    // Capture incoming user messages (strip format instructions and IM metadata)
     if (ev.type === "message.user" && text) {
-      const isFormatInstruction = text.includes("FORMAT REQUIREMENTS") || text.includes("[PLAN]");
-      if (!isFormatInstruction) {
-        messages.push({ direction: "in", sender: "User", text: text.slice(0, 200), timestamp: ts, read: true });
-        tagEvents.push({ type: "message_in", text: text.slice(0, 200), timestamp: ts, meta: { sender: "User" } });
+      let cleanText = text
+        .replace(/\s*FORMAT REQUIREMENTS:[\s\S]*$/, "")
+        .replace(/^Conversation info \(untrusted metadata\):[\s\S]*?```\s*/m, "")
+        .trim();
+      if (!cleanText) cleanText = text.slice(0, 300);
+      messages.push({ direction: "in", sender: "User", text: cleanText.slice(0, 300), timestamp: ts, read: true });
+      tagEvents.push({ type: "message_in", text: cleanText.slice(0, 200), timestamp: ts, meta: { sender: "User" } });
+    }
+
+    // Capture agent text replies as outgoing messages
+    if (ev.type === "message.agent" && text) {
+      const cleanReply = text
+        .replace(/\*Thinking:\*[\s\S]*?(?=\n\n|$)/, "")
+        .replace(/\[(?:PLAN|STEP|THINKING|DISCOVERY|CHALLENGE|OUTPUT|MESSAGE|SUMMARY)\][\s\S]*?(?=\n\[|$)/g, "")
+        .trim();
+      if (cleanReply && cleanReply.length > 10) {
+        messages.push({ direction: "out", sender: "Agent", text: cleanReply.slice(0, 300), timestamp: ts, read: false });
       }
     }
   }

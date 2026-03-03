@@ -44,6 +44,24 @@ function ActivityIndicator({ status }: { status: ActivityStatus }) {
   );
 }
 
+function SettingsLink() {
+  if (process.env.NEXT_PUBLIC_VERCEL === "1") return null;
+  return (
+    <a
+      href="/settings"
+      className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium
+        text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]
+        transition-colors shrink-0"
+      title="Settings"
+    >
+      <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="8" cy="8" r="2.5" />
+        <path d="M6.8 1.5h2.4l.4 1.8.8.4 1.7-.7 1.7 1.7-.7 1.7.4.8 1.8.4v2.4l-1.8.4-.4.8.7 1.7-1.7 1.7-1.7-.7-.8.4-.4 1.8H6.8l-.4-1.8-.8-.4-1.7.7-1.7-1.7.7-1.7-.4-.8-1.8-.4V6.8l1.8-.4.4-.8-.7-1.7L3.9 2.2l1.7.7.8-.4z" />
+      </svg>
+    </a>
+  );
+}
+
 function ShareButton() {
   const [copied, setCopied] = useState(false);
 
@@ -64,7 +82,16 @@ function ShareButton() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Clipboard API not available
+      // Clipboard API may fail on HTTP; use textarea fallback
+      const ta = document.createElement("textarea");
+      ta.value = url;
+      ta.style.cssText = "position:fixed;left:-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     }
   }, []);
 
@@ -96,6 +123,7 @@ export default function MissionBar({ missionName, elapsedMs, isLive, compact, ac
         <ActivityIndicator status={activityStatus} />
         <span className="text-[9px] text-[var(--text-muted)] ml-auto shrink-0">{formatElapsed(elapsedMs)}</span>
         <ShareButton />
+        <SettingsLink />
       </div>
     );
   }
@@ -112,6 +140,7 @@ export default function MissionBar({ missionName, elapsedMs, isLive, compact, ac
       <ActivityIndicator status={activityStatus} />
       <span className="text-[10px] text-[var(--text-muted)] ml-auto shrink-0">{formatElapsed(elapsedMs)}</span>
       <ShareButton />
+      <SettingsLink />
     </div>
   );
 }

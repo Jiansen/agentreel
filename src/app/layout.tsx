@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import SettingsFloat from "@/components/SettingsFloat";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -71,6 +72,7 @@ export default function RootLayout({
       </head>
       <body className="antialiased">
         {children}
+        {process.env.VERCEL !== "1" && <SettingsFloat />}
         {process.env.VERCEL === "1" && (
           <>
             <Analytics />
