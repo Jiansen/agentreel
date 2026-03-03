@@ -27,6 +27,16 @@ uname -srm
 curl -fsSL https://raw.githubusercontent.com/Jiansen/agentreel/main/install.sh | bash
 ```
 
+If the command takes longer than 5 minutes or you lose track of it, check if
+installation already completed by reading the result file:
+
+```bash
+cat ~/.agentreel/.install-result 2>/dev/null
+```
+
+If `result=SUCCESS` appears, skip to Step 4. The installer writes this file when
+it finishes, even if the command output was not captured.
+
 If `agentreel` is not found after install, run:
 ```bash
 export PATH="$HOME/.local/bin:$PATH"

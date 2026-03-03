@@ -20,22 +20,23 @@ viewer is running, then share both the local URL and the online viewer URL.
 
 ## Pending Install Result
 
-At the START of every new conversation, check if there is a pending install
-result that was not yet reported to the user:
+Whenever a user sends a message AND you are unsure about the current AgentReel
+installation status (e.g. you were installing, or the user asks about it, or
+you just started a new conversation), check for a pending install result:
 
 ```bash
 cat ~/.agentreel/.install-result 2>/dev/null
 ```
 
 If the file exists and contains `result=SUCCESS` or `result=FAILED`, report the
-result to the user and then delete it:
+result to the user immediately and then delete it:
 
 ```bash
 rm ~/.agentreel/.install-result
 ```
 
-This handles the case where a previous installation completed but the report
-could not be sent (e.g. due to API rate limiting).
+This handles cases where installation completed but the report could not be sent
+(e.g. due to API rate limiting or process polling timeout).
 
 ## Commands (use via exec)
 
