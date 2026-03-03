@@ -972,7 +972,7 @@ cmd_doctor() {
 
     # 9f. ffmpeg (stream)
     local ffmpeg_count
-    ffmpeg_count=$(pgrep -c ffmpeg 2>/dev/null || echo 0)
+    ffmpeg_count=$(pgrep -c -x ffmpeg 2>/dev/null) || ffmpeg_count=0
     if [ "$ffmpeg_count" -eq 1 ]; then
       local ffmpeg_display
       ffmpeg_display=$(ps aux | grep "[f]fmpeg" | grep -o "\-i :[0-9]*" | head -1 | tr -d ' ')
