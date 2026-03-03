@@ -17,6 +17,8 @@ export TZ=UTC
 #   CHECK_INTERVAL    — Seconds between checks (default: 15)
 
 ZAI_API_KEY="${ZAI_API_KEY:-}"
+# Load stream keys if available
+[[ -f ~/stream.env ]] && source ~/stream.env
 PID_DIR="${HOME}/pids"
 CHECK_INTERVAL="${CHECK_INTERVAL:-15}"
 
@@ -38,15 +40,16 @@ restart_relay() {
 }
 
 restart_tasks() {
-  log "Starting task_loop.sh"
-  nohup bash -c "export ZAI_API_KEY='${ZAI_API_KEY:-}' && bash ~/task_loop.sh" \
-    > ~/logs/task_loop.log 2>&1 &
+  log "Starting task_daemon.sh"
+  nohup bash -c "export ZAI_API_KEY='${ZAI_API_KEY:-}' && bash ~/task_daemon.sh" \
+    > ~/logs/task_daemon.log 2>&1 &
   echo $! > "${PID_DIR}/tasks.pid"
   log "tasks PID: $(cat "${PID_DIR}/tasks.pid")"
 }
 
 restart_stream() {
   log "Starting stream_dual.sh"
+  source ~/stream.env 2>/dev/null || true
   nohup bash ~/stream_dual.sh > ~/logs/stream.log 2>&1 &
   echo $! > "${PID_DIR}/stream.pid"
   log "stream PID: $(cat "${PID_DIR}/stream.pid")"

@@ -417,6 +417,28 @@ find_port() {
   echo "$port"
 }
 
+setup_openclaw_visible_profile() {
+  local cdp_port="${1:-18802}"
+  local oc_config="$HOME/.openclaw/openclaw.json"
+  [ -f "$oc_config" ] || return 0
+  command -v python3 &>/dev/null || return 0
+  python3 -c "
+import json, sys
+try:
+    with open('$oc_config', 'r') as f:
+        cfg = json.load(f)
+    browser = cfg.setdefault('browser', {})
+    profiles = browser.setdefault('profiles', {})
+    if 'visible' not in profiles:
+        profiles['visible'] = {'cdpUrl': 'http://127.0.0.1:${cdp_port}', 'color': '#00CC66'}
+    browser['defaultProfile'] = 'visible'
+    with open('$oc_config', 'w') as f:
+        json.dump(cfg, f, indent=2)
+except Exception as e:
+    print(f'Warning: could not configure OpenClaw visible profile: {e}', file=sys.stderr)
+" 2>/dev/null
+}
+
 cmd_start() {
   local port
   port=$(find_port "${AGENTREEL_PORT:-3000}")
@@ -431,18 +453,34 @@ cmd_start() {
 
   mkdir -p "$AGENTREEL_DIR/logs" "$AGENTREEL_DIR/pids"
 
-  # 1. Desktop — Xvfb only (Chromium needs viewer to be ready, started last)
+  # 1. Desktop — dual Xvfb displays
+  #   :99 = agent workspace (OpenClaw browser, captured by VNC)
+  #   :100 = broadcast kiosk (Chromium showing /live with VNC of :99, captured by ffmpeg)
   local desktop_enabled=false
+  local broadcast_display="${AGENTREEL_BROADCAST_DISPLAY:-:100}"
   if command -v Xvfb &>/dev/null && [ "${AGENTREEL_NO_DESKTOP:-0}" != "1" ]; then
     desktop_enabled=true
     if ! pgrep -f "Xvfb ${display_num}" >/dev/null 2>&1; then
-      Xvfb "$display_num" -screen 0 "${resolution}x24" &
+      Xvfb "$display_num" -screen 0 "${resolution}x24" -ac &
       echo $! > "$AGENTREEL_DIR/pids/xvfb.pid"
       sleep 1
-      echo "  Desktop: Xvfb ${display_num} (${resolution})"
+      echo "  Desktop: Xvfb ${display_num} (agent workspace)"
     else
       echo "  Desktop: Xvfb ${display_num} already running"
     fi
+    if ! pgrep -f "Xvfb ${broadcast_display}" >/dev/null 2>&1; then
+      Xvfb "$broadcast_display" -screen 0 "${resolution}x24" -ac &
+      echo $! > "$AGENTREEL_DIR/pids/xvfb-broadcast.pid"
+      sleep 1
+      echo "  Broadcast: Xvfb ${broadcast_display} (kiosk display)"
+    else
+      echo "  Broadcast: Xvfb ${broadcast_display} already running"
+    fi
+    for disp in "$display_num" "$broadcast_display"; do
+      if command -v fluxbox &>/dev/null && ! pgrep -f "fluxbox.*${disp}" >/dev/null 2>&1; then
+        DISPLAY="$disp" fluxbox > /dev/null 2>&1 &
+      fi
+    done
   else
     echo "  Desktop: skipped (Xvfb not found or disabled)"
   fi
@@ -480,14 +518,16 @@ cmd_start() {
     echo "  Viewer: http://localhost:${port} (dev mode)"
   fi
 
-  # 4. Chromium — launched AFTER viewer to ensure the page is available
+  # 4. Chromium — dual browser setup
+  #   Agent Chrome on :99 with CDP (for OpenClaw browser tools)
+  #   Kiosk Chrome on :100 showing /live with VNC of :99
   if [ "$desktop_enabled" = true ]; then
     local chromium_cmd=""
     if command -v chromium &>/dev/null; then chromium_cmd="chromium"
     elif command -v chromium-browser &>/dev/null; then chromium_cmd="chromium-browser"
     fi
 
-    if [ -n "$chromium_cmd" ] && ! pgrep -f "chromium.*broadcast" >/dev/null 2>&1; then
+    if [ -n "$chromium_cmd" ]; then
       local tries=0
       while [ $tries -lt 15 ]; do
         if curl -sf --max-time 2 "http://localhost:${port}/" >/dev/null 2>&1; then
@@ -497,17 +537,46 @@ cmd_start() {
         sleep 2
       done
 
-      local broadcast_url="http://localhost:${port}/broadcast?preset=landscape&relay=http%3A%2F%2Flocalhost%3A${relay_port}"
-      DISPLAY="$display_num" nohup "$chromium_cmd" \
-        --no-sandbox --disable-gpu \
-        --user-data-dir=/tmp/chromium-bcast \
-        --window-size="${resolution%%x*},${resolution##*x}" \
-        --no-first-run --disable-background-timer-throttling \
-        --disable-session-crashed-bubble --disable-infobars \
-        --disable-notifications --kiosk "$broadcast_url" \
-        > "$AGENTREEL_DIR/logs/chromium.log" 2>&1 &
-      echo $! > "$AGENTREEL_DIR/pids/chromium.pid"
-      echo "  Browser: Chromium kiosk → /broadcast"
+      local cdp_port="${AGENTREEL_CDP_PORT:-18802}"
+      local vnc_port="${AGENTREEL_VNC_WS_PORT:-6080}"
+
+      # 4a. Agent Chrome on agent display with CDP
+      if ! pgrep -f "chromium.*remote-debugging-port=${cdp_port}" >/dev/null 2>&1; then
+        DISPLAY="$display_num" nohup "$chromium_cmd" \
+          --no-sandbox --disable-gpu \
+          --remote-debugging-port="$cdp_port" \
+          --user-data-dir=/tmp/chromium-agent \
+          --window-size="${resolution%%x*},${resolution##*x}" \
+          --no-first-run --disable-background-timer-throttling \
+          --disable-session-crashed-bubble --disable-infobars \
+          --disable-notifications --start-maximized \
+          "about:blank" \
+          > "$AGENTREEL_DIR/logs/chromium-agent.log" 2>&1 &
+        echo $! > "$AGENTREEL_DIR/pids/chromium-agent.pid"
+        sleep 3
+        DISPLAY="$display_num" xdotool search --class "Chromium" windowmove 0 0 windowsize "${resolution%%x*}" "${resolution##*x}" 2>/dev/null || true
+        echo "  Agent Browser: Chrome on ${display_num} (CDP ${cdp_port})"
+
+        # Configure OpenClaw visible profile
+        setup_openclaw_visible_profile "$cdp_port"
+      fi
+
+      # 4b. Kiosk Chrome on broadcast display
+      if ! pgrep -f "chromium.*kiosk.*live" >/dev/null 2>&1; then
+        local live_url="http://localhost:${port}/live?vnc=http%3A%2F%2Flocalhost%3A${vnc_port}%2Fvnc_clean.html&relay=http%3A%2F%2Flocalhost%3A${relay_port}"
+        DISPLAY="$broadcast_display" nohup "$chromium_cmd" \
+          --no-sandbox --disable-gpu \
+          --user-data-dir=/tmp/chromium-kiosk \
+          --window-size="${resolution%%x*},${resolution##*x}" \
+          --no-first-run --disable-background-timer-throttling \
+          --disable-session-crashed-bubble --disable-infobars \
+          --disable-notifications --kiosk "$live_url" \
+          > "$AGENTREEL_DIR/logs/chromium-kiosk.log" 2>&1 &
+        echo $! > "$AGENTREEL_DIR/pids/chromium-kiosk.pid"
+        sleep 3
+        DISPLAY="$broadcast_display" xdotool search --class "Chromium" windowmove 0 0 windowsize "${resolution%%x*}" "${resolution##*x}" 2>/dev/null || true
+        echo "  Kiosk: Chrome on ${broadcast_display} → /live (VNC+relay)"
+      fi
     fi
   fi
 
@@ -527,7 +596,8 @@ cmd_stop() {
     rm -f "$pidfile"
   done
   pkill -f "relay_server.py" 2>/dev/null || true
-  pkill -f "chromium.*broadcast" 2>/dev/null || true
+  pkill -f "chromium.*kiosk" 2>/dev/null || true
+  pkill -f "chromium.*chromium-agent" 2>/dev/null || true
   echo "Done."
 }
 
