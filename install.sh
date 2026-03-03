@@ -395,6 +395,7 @@ usage() {
   echo "  stop            Stop all AgentReel services"
   echo "  status          Show service status"
   echo "  doctor          Full system health check"
+  echo "  crash-report    Collect diagnostics for bug report"
   echo "  config          Show or set configuration"
   echo "  install stream  Install streaming module (VNC + ffmpeg)"
   echo "  stream          Start RTMP streaming to YouTube/Twitch"
@@ -587,7 +588,19 @@ cmd_start() {
 
 cmd_stop() {
   echo "Stopping AgentReel..."
-  for pidfile in "$AGENTREEL_DIR/pids/"*.pid; do
+
+  # Stop watchdog first to prevent restart loops
+  if [ -f /tmp/agentreel-watchdog.lock ]; then
+    local wd_pid
+    wd_pid=$(cat /tmp/agentreel-watchdog.lock 2>/dev/null || echo "")
+    if [ -n "$wd_pid" ] && kill -0 "$wd_pid" 2>/dev/null; then
+      kill "$wd_pid" 2>/dev/null && echo "  Stopped watchdog (PID $wd_pid)" || true
+    fi
+    rm -f /tmp/agentreel-watchdog.lock
+  fi
+  pkill -f "watchdog.sh" 2>/dev/null || true
+
+  for pidfile in "$AGENTREEL_DIR/pids/"*.pid "${HOME}/pids/"*.pid; do
     [ -f "$pidfile" ] || continue
     local name pid
     name=$(basename "$pidfile" .pid)
@@ -595,16 +608,24 @@ cmd_stop() {
     kill "$pid" 2>/dev/null && echo "  Stopped $name (PID $pid)" || true
     rm -f "$pidfile"
   done
+
   pkill -f "relay_server.py" 2>/dev/null || true
   pkill -f "chromium.*kiosk" 2>/dev/null || true
   pkill -f "chromium.*chromium-agent" 2>/dev/null || true
+  pkill -f "task_daemon.sh" 2>/dev/null || true
+  pkill -f "stream_dual.sh" 2>/dev/null || true
+  killall -9 ffmpeg 2>/dev/null || true
+  pkill -f "x11vnc" 2>/dev/null || true
+  pkill -f "websockify" 2>/dev/null || true
   echo "Done."
 }
 
 cmd_status() {
   echo "AgentReel Status"
+  local found=false
   for pidfile in "$AGENTREEL_DIR/pids/"*.pid; do
     [ -f "$pidfile" ] || continue
+    found=true
     name=$(basename "$pidfile" .pid)
     pid=$(cat "$pidfile")
     if kill -0 "$pid" 2>/dev/null; then
@@ -614,7 +635,18 @@ cmd_status() {
       rm -f "$pidfile"
     fi
   done
-  [ ! -d "$AGENTREEL_DIR/pids" ] && echo "  No services running."
+
+  # Watchdog status
+  if [ -f /tmp/agentreel-watchdog.lock ]; then
+    local wd_pid
+    wd_pid=$(cat /tmp/agentreel-watchdog.lock 2>/dev/null || echo "")
+    if [ -n "$wd_pid" ] && kill -0 "$wd_pid" 2>/dev/null; then
+      echo "  watchdog: running (PID $wd_pid)"
+      found=true
+    fi
+  fi
+
+  $found || echo "  No services running."
 }
 
 cmd_config() {
@@ -881,6 +913,96 @@ cmd_doctor() {
     _suggest "Create one: agentreel config set port $vport"
   fi
 
+  # 9. Desktop / Livestream checks (only if desktop is enabled)
+  if command -v Xvfb &>/dev/null && [ "${AGENTREEL_NO_DESKTOP:-0}" != "1" ]; then
+    local agent_display="${AGENTREEL_DISPLAY:-:99}"
+    local bcast_display="${AGENTREEL_BROADCAST_DISPLAY:-:100}"
+    local cdp_port="${AGENTREEL_CDP_PORT:-18802}"
+    local vnc_ws_port="${AGENTREEL_VNC_WS_PORT:-6080}"
+
+    # 9a. Xvfb displays
+    if pgrep -f "Xvfb ${agent_display}" >/dev/null 2>&1; then
+      _check PASS "Xvfb agent" "${agent_display} running"
+    else
+      _check FAIL "Xvfb agent" "${agent_display} not running"
+      _suggest "Run: agentreel start"
+    fi
+    if pgrep -f "Xvfb ${bcast_display}" >/dev/null 2>&1; then
+      _check PASS "Xvfb broadcast" "${bcast_display} running"
+    else
+      _check WARN "Xvfb broadcast" "${bcast_display} not running (needed for streaming)"
+    fi
+
+    # 9b. Agent Chrome CDP
+    if curl -sf --max-time 3 "http://127.0.0.1:${cdp_port}/json/version" >/dev/null 2>&1; then
+      local agent_tabs
+      agent_tabs=$(curl -sf "http://127.0.0.1:${cdp_port}/json/list" 2>/dev/null | python3 -c "import json,sys; tabs=json.load(sys.stdin); print(len(tabs))" 2>/dev/null || echo "?")
+      _check PASS "Agent Chrome" "CDP on ${cdp_port}, ${agent_tabs} tab(s)"
+    else
+      _check WARN "Agent Chrome" "CDP ${cdp_port} not responding (agent browser not started)"
+      _suggest "It starts automatically with the next task_daemon task"
+    fi
+
+    # 9c. OpenClaw browser profile
+    if [ -f "$HOME/.openclaw/openclaw.json" ]; then
+      local oc_profile
+      oc_profile=$(python3 -c "import json; d=json.load(open('$HOME/.openclaw/openclaw.json')); print(d.get('browser',{}).get('defaultProfile','?'))" 2>/dev/null || echo "?")
+      if [ "$oc_profile" = "visible" ]; then
+        _check PASS "Browser profile" "OpenClaw default profile = visible"
+      else
+        _check WARN "Browser profile" "OpenClaw default profile = ${oc_profile} (expected 'visible')"
+        _suggest "Run: agentreel start (auto-configures visible profile)"
+      fi
+    fi
+
+    # 9d. x11vnc
+    if pgrep -f "x11vnc.*display ${agent_display}" >/dev/null 2>&1; then
+      _check PASS "x11vnc" "capturing ${agent_display}"
+    else
+      _check WARN "x11vnc" "not running (needed for browser view in stream)"
+      _suggest "Run: x11vnc -display ${agent_display} -rfbport 5999 -nopw -shared -forever -bg"
+    fi
+
+    # 9e. websockify
+    if pgrep -f "websockify.*${vnc_ws_port}" >/dev/null 2>&1; then
+      _check PASS "websockify" "port ${vnc_ws_port}"
+    else
+      _check WARN "websockify" "not running (needed for VNC in browser)"
+    fi
+
+    # 9f. ffmpeg (stream)
+    local ffmpeg_count
+    ffmpeg_count=$(pgrep -c ffmpeg 2>/dev/null || echo 0)
+    if [ "$ffmpeg_count" -eq 1 ]; then
+      local ffmpeg_display
+      ffmpeg_display=$(ps aux | grep "[f]fmpeg" | grep -o "\-i :[0-9]*" | head -1 | tr -d ' ')
+      local ffmpeg_rate
+      ffmpeg_rate=$(ps aux | grep "[f]fmpeg" | grep -o "maxrate [0-9]*k" | head -1)
+      if [ "$ffmpeg_display" = "-i ${bcast_display}" ]; then
+        _check PASS "ffmpeg" "1 instance, capturing ${bcast_display}, ${ffmpeg_rate:-unknown bitrate}"
+      else
+        _check WARN "ffmpeg" "capturing ${ffmpeg_display:-unknown} (expected ${bcast_display})"
+        _suggest "Restart stream: kill ffmpeg, update DISPLAY_NUM=${bcast_display} in stream.env"
+      fi
+    elif [ "$ffmpeg_count" -gt 1 ]; then
+      _check FAIL "ffmpeg" "${ffmpeg_count} instances running (should be 1)"
+      _suggest "Kill all: pkill -9 -f stream_dual; killall -9 ffmpeg; then restart"
+    elif [ "$ffmpeg_count" -eq 0 ]; then
+      if [ -n "${YT_STREAM_KEY:-}" ] || [ -n "${TW_STREAM_KEY:-}" ]; then
+        _check WARN "ffmpeg" "not running (stream keys configured but not streaming)"
+      else
+        _check PASS "ffmpeg" "not running (no stream keys configured)"
+      fi
+    fi
+
+    # 9g. Kiosk Chrome on broadcast display
+    if pgrep -f "chromium.*kiosk" >/dev/null 2>&1; then
+      _check PASS "Kiosk Chrome" "running on ${bcast_display}"
+    else
+      _check WARN "Kiosk Chrome" "not running (needed for streaming)"
+    fi
+  fi
+
   # Summary
   echo ""
   echo "═══════════════════════════════════════"
@@ -925,11 +1047,60 @@ DOCEOF
   return "$fail_count"
 }
 
+cmd_crash_report() {
+  local report_dir="/tmp/agentreel-crash-$(date -u +"%Y%m%d-%H%M%S")"
+  mkdir -p "$report_dir"
+
+  echo "Collecting crash report → $report_dir"
+
+  echo "--- System ---" > "$report_dir/system.txt"
+  uname -srm >> "$report_dir/system.txt"
+  echo "Node: $(node -v 2>/dev/null || echo N/A)" >> "$report_dir/system.txt"
+  echo "Python: $(python3 -V 2>&1 || echo N/A)" >> "$report_dir/system.txt"
+  echo "AgentReel: $(get_local_version)" >> "$report_dir/system.txt"
+  echo "OpenClaw: $(openclaw -V 2>/dev/null || echo N/A)" >> "$report_dir/system.txt"
+
+  echo "--- Processes ---" > "$report_dir/processes.txt"
+  ps aux | grep -E "next|relay|chromium|ffmpeg|task_daemon|watchdog|x11vnc|websockify|Xvfb|openclaw" | grep -v grep >> "$report_dir/processes.txt" 2>/dev/null || true
+
+  echo "--- Ports ---" > "$report_dir/ports.txt"
+  for p in 3000 8765 6080 5999 18802; do
+    if (echo >/dev/tcp/127.0.0.1/$p) 2>/dev/null; then
+      echo "Port $p: IN USE" >> "$report_dir/ports.txt"
+    else
+      echo "Port $p: free" >> "$report_dir/ports.txt"
+    fi
+  done
+
+  for logfile in viewer.log relay.log chromium-agent.log chromium-kiosk.log; do
+    if [ -f "$AGENTREEL_DIR/logs/$logfile" ]; then
+      tail -50 "$AGENTREEL_DIR/logs/$logfile" > "$report_dir/$logfile" 2>/dev/null || true
+    fi
+  done
+
+  for logfile in task_daemon.log stream.log watchdog.log; do
+    if [ -f "$HOME/logs/$logfile" ]; then
+      tail -50 "$HOME/logs/$logfile" > "$report_dir/$logfile" 2>/dev/null || true
+    fi
+  done
+
+  agentreel doctor > "$report_dir/doctor.txt" 2>&1 || true
+
+  local archive="/tmp/agentreel-crash-$(date -u +"%Y%m%d-%H%M%S").tar.gz"
+  tar -czf "$archive" -C /tmp "$(basename "$report_dir")" 2>/dev/null
+  echo ""
+  echo "Crash report: $archive"
+  echo "Attach this file to a GitHub issue:"
+  echo "  https://github.com/Jiansen/agentreel/issues/new"
+  rm -rf "$report_dir"
+}
+
 case "${1:-help}" in
   start)   cmd_start ;;
   stop)    cmd_stop ;;
   status)  cmd_status ;;
   doctor)  shift; cmd_doctor "$@" ;;
+  crash-report) cmd_crash_report ;;
   config)  shift; cmd_config "$@" ;;
   install) shift; case "${1:-}" in stream) cmd_install_stream ;; *) usage ;; esac ;;
   stream)  cmd_stream ;;
