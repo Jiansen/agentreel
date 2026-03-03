@@ -566,6 +566,8 @@ cmd_start() {
           --no-first-run --disable-background-timer-throttling \
           --disable-session-crashed-bubble --disable-infobars \
           --disable-notifications --start-maximized \
+          --noerrdialogs \
+          --disable-features=InfiniteSessionRestore \
           "about:blank" \
           > "$AGENTREEL_DIR/logs/chromium-agent.log" 2>&1 &
         echo $! > "$AGENTREEL_DIR/pids/chromium-agent.pid"

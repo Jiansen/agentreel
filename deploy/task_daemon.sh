@@ -259,6 +259,8 @@ except: pass
     --no-first-run --disable-background-timer-throttling \
     --disable-session-crashed-bubble --disable-infobars \
     --disable-notifications --start-maximized \
+    --noerrdialogs \
+    --disable-features=InfiniteSessionRestore \
     "about:blank" \
     > /tmp/chromium-agent.log 2>&1 &
   sleep 5
