@@ -29,12 +29,20 @@ export default function ClassicSplit({ data, vncUrl, relayUrl, rawLines = [], ta
 
   return (
     <div className="flex w-full h-full bg-[var(--bg-primary)]">
-      {/* Left 70%: Agent Browser (top 65%) + Agent Terminal (bottom 35%) */}
+      {/* Left 70%: Agent Browser (top 65%) + Agent Terminal (bottom 35%), or full terminal in kiosk */}
       <div className="w-[70%] flex flex-col relative">
-        <AgentView vncUrl={vncUrl} className="h-[65%]" />
-        <div className="h-[35%]">
-          <AgentTerminal rawLines={rawLines} />
-        </div>
+        {vncUrl ? (
+          <>
+            <AgentView vncUrl={vncUrl} className="h-[65%]" />
+            <div className="h-[35%]">
+              <AgentTerminal rawLines={rawLines} />
+            </div>
+          </>
+        ) : (
+          <div className="h-full">
+            <AgentTerminal rawLines={rawLines} />
+          </div>
+        )}
         <Watermark />
       </div>
 
