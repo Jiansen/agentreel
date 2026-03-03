@@ -149,18 +149,22 @@ check_relay_health() {
 }
 
 check_ffmpeg_health() {
+  # stream_dual.sh has its own retry loop for ffmpeg.
+  # Watchdog only needs to ensure stream_dual.sh itself is alive.
   if ! is_alive stream; then return 1; fi
+
+  # Dedup: if somehow multiple stream_dual got spawned, kill extras
+  local stream_pid
+  stream_pid=$(cat "${PID_DIR}/stream.pid" 2>/dev/null || echo "")
+  if [ -n "$stream_pid" ]; then
+    kill_duplicates "stream_dual" "$stream_pid"
+  fi
+
+  # Log ffmpeg count for observability but don't kill/restart
   local ffmpeg_count
   ffmpeg_count=$(pgrep -c -x ffmpeg 2>/dev/null) || ffmpeg_count=0
-  if (( ffmpeg_count > 1 )); then
-    log "Multiple ffmpeg ($ffmpeg_count) — killing all and restarting"
-    killall -9 ffmpeg 2>/dev/null || true
-    local pid
-    pid=$(cat "${PID_DIR}/stream.pid" 2>/dev/null || echo "")
-    [ -n "$pid" ] && kill "$pid" 2>/dev/null || true
-    rm -f "${PID_DIR}/stream.pid"
-    sleep 2
-    return 1
+  if (( ffmpeg_count > 2 )); then
+    log "WARN: $ffmpeg_count ffmpeg processes detected (stream_dual manages this)"
   fi
   return 0
 }
