@@ -28,12 +28,29 @@ export default function BroadcastClient() {
     "checking" | "authorized" | "denied"
   >("checking");
   const [tokenInput, setTokenInput] = useState("");
+  const [detectedVncUrl, setDetectedVncUrl] = useState<string>("");
 
   const preset = (params.get("preset") ?? "landscape") as BroadcastPreset;
-  const vncUrl = params.get("vnc") ?? "";
+  const vncUrlParam = params.get("vnc") ?? "";
   const relayUrl = params.get("relay") ?? "/api/relay";
   const tabInterval = parseInt(params.get("tabInterval") ?? "10000", 10);
   const missionName = params.get("mission") ?? undefined;
+  const vncUrl = vncUrlParam || detectedVncUrl;
+
+  useEffect(() => {
+    if (vncUrlParam) return;
+    fetch("/api/vnc-status")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.available) {
+          const host = window.location.hostname;
+          setDetectedVncUrl(
+            `http://${host}:${data.port}${data.path}`
+          );
+        }
+      })
+      .catch(() => {});
+  }, [vncUrlParam]);
 
   const checkAccess = useCallback(
     async (token?: string) => {

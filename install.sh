@@ -509,7 +509,13 @@ cmd_start() {
     echo "  Relay:  skipped (Python 3.10+ or relay_server.py not found)"
   fi
 
-  # 3. Viewer (Next.js)
+  # 3. Viewer (Next.js) — kill any stale viewers first
+  local stale_viewers
+  stale_viewers=$(pgrep -f "next.*start.*-p" 2>/dev/null || true)
+  if [ -n "$stale_viewers" ]; then
+    echo "$stale_viewers" | xargs -r kill 2>/dev/null || true
+    sleep 1
+  fi
   cd "$AGENTREEL_DIR"
   if [ -f ".next/BUILD_ID" ]; then
     PORT="$port" nohup npx next start -p "$port" \
@@ -566,7 +572,40 @@ cmd_start() {
         setup_openclaw_visible_profile "$cdp_port"
       fi
 
-      # 4a.2 x11vnc + websockify (bridge agent display to browser VNC)
+      # 4a.2 Ensure vnc_clean.html exists (custom noVNC client)
+      if [ -d /usr/share/novnc ] && [ ! -f /usr/share/novnc/vnc_clean.html ]; then
+        cat > /tmp/vnc_clean.html <<'VNCEOF'
+<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8">
+<title>Agent VNC</title>
+<style>
+  html, body { margin:0; padding:0; width:100%; height:100%; overflow:hidden; background:#000; }
+  #screen { width:100%; height:100%; }
+</style>
+</head><body>
+<div id="screen"></div>
+<script type="module">
+import RFB from './core/rfb.js';
+const params = new URLSearchParams(location.search);
+const host = params.get('host') || location.hostname;
+const port = params.get('port') || '6080';
+const path = params.get('path') || 'websockify';
+const url = `ws://${host}:${port}/${path}`;
+const rfb = new RFB(document.getElementById('screen'), url, {});
+rfb.viewOnly = false;
+rfb.scaleViewport = true;
+rfb.resizeSession = false;
+rfb.showDotCursor = false;
+</script>
+</body></html>
+VNCEOF
+        sudo cp /tmp/vnc_clean.html /usr/share/novnc/vnc_clean.html 2>/dev/null || \
+          cp /tmp/vnc_clean.html /usr/share/novnc/vnc_clean.html 2>/dev/null || true
+        rm -f /tmp/vnc_clean.html
+      fi
+
+      # 4a.3 x11vnc + websockify (bridge agent display to browser VNC)
       if command -v x11vnc &>/dev/null; then
         if ! pgrep -f "x11vnc.*display ${display_num}" >/dev/null 2>&1; then
           x11vnc -display "$display_num" -rfbport 5999 -nopw -shared -forever -bg \

@@ -50,7 +50,7 @@ TASK_TIMEOUT="${TASK_TIMEOUT:-600}"
 FEED_INTERVAL="${FEED_INTERVAL:-300}"
 QUEUE_LOW_MARK="${QUEUE_LOW_MARK:-3}"
 
-FORMAT_INSTRUCTIONS='FORMAT REQUIREMENTS: [PLAN] 1. Navigate to ... [STEP 1/N BEGIN] ... [STEP 1/N COMPLETE] ... Use [THINKING] for analysis, [DISCOVERY] for interesting findings, [CHALLENGE] for obstacles, [OUTPUT] for final results, [SUMMARY] for conclusion.'
+FORMAT_INSTRUCTIONS='FORMAT REQUIREMENTS: [PLAN] 1. Navigate to ... [STEP 1/N BEGIN] ... [STEP 1/N COMPLETE] ... Use [THINKING] for analysis, [DISCOVERY] for interesting findings, [CHALLENGE] for obstacles, [OUTPUT] for final results, [SUMMARY] for conclusion. CLEANUP: When done, close all browser tabs you opened to keep the desktop clean for the next task.'
 
 current_backoff=0
 shutdown_requested=0
@@ -178,6 +178,38 @@ seconds_since_last_call() {
   last=$(tail -1 "$RATE_LOG")
   now=$(date +%s)
   echo $(( now - last ))
+}
+
+# ─── Browser cleanup ───
+
+CDP_PORT="${AGENTREEL_CDP_PORT:-18802}"
+
+cleanup_agent_browser() {
+  local cdp="http://127.0.0.1:${CDP_PORT}"
+  local tabs
+  tabs=$(curl -sf --max-time 5 "${cdp}/json/list" 2>/dev/null) || return 0
+  local tab_ids
+  tab_ids=$(echo "$tabs" | python3 -c "
+import json, sys
+try:
+    tabs = json.load(sys.stdin)
+    for t in tabs:
+        url = t.get('url', '')
+        if url != 'about:blank' and t.get('type') == 'page':
+            print(t['id'])
+except: pass
+" 2>/dev/null) || return 0
+
+  local count=0
+  while IFS= read -r tab_id; do
+    [ -z "$tab_id" ] && continue
+    curl -sf --max-time 3 "${cdp}/json/close/${tab_id}" >/dev/null 2>&1 || true
+    (( count++ )) || true
+  done <<< "$tab_ids"
+
+  if [ "$count" -gt 0 ]; then
+    log "Cleanup: closed $count browser tab(s)"
+  fi
 }
 
 # ─── Task execution ───
@@ -488,6 +520,9 @@ cmd_daemon() {
     # Execute
     local task_result=0
     run_task "$taskfile" || task_result=$?
+
+    # Post-task cleanup: close all Chrome tabs except the first (about:blank)
+    cleanup_agent_browser
 
     if [ "$task_result" -eq 3 ]; then
       log "Yielding ${TELEGRAM_YIELD}s after interrupt"
