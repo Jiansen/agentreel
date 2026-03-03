@@ -40,14 +40,16 @@ function parseIssueBody(body: string): {
   const screenshotRaw =
     sections["screenshot (16:9)"] || sections["screenshot"] || "";
   const imgMatch = screenshotRaw.match(
-    /!\[.*?\]\((https:\/\/[^)]+)\)|(?:^|\s)(https:\/\/(?:user-images|github)\.githubusercontent\.com\/[^\s)]+)/m
+    /!\[.*?\]\((https:\/\/[^)]+)\)|<img[^>]+src="(https:\/\/[^"]+)"|(?:^|\s)(https:\/\/github\.com\/user-attachments\/[^\s)"<]+)/m
   );
 
   return {
     description:
       sections["what does your agent do?"] || sections["description"] || "",
     videoUrl: extractUrl(sections["video url"]) || "",
-    screenshotUrl: imgMatch ? imgMatch[1] || imgMatch[2] : undefined,
+    screenshotUrl: imgMatch
+      ? imgMatch[1] || imgMatch[2] || imgMatch[3]
+      : undefined,
     framework: sections["agent framework"] || "Other",
   };
 }
