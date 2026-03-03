@@ -7,7 +7,6 @@ import { Suspense } from "react";
 function VncViewerInner() {
   const params = useSearchParams();
   const containerRef = useRef<HTMLDivElement>(null);
-  const rfbRef = useRef<unknown>(null);
   const [status, setStatus] = useState("Connecting...");
 
   const host = params.get("host") || (typeof window !== "undefined" ? window.location.hostname : "localhost");
@@ -18,40 +17,33 @@ function VncViewerInner() {
     if (!containerRef.current) return;
 
     const wsUrl = `ws://${host}:${port}/${path}`;
-
-    let rfb: { disconnect: () => void } | null = null;
     let cancelled = false;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let rfb: any = null;
 
     (async () => {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const mod = await (Function('return import("https://esm.sh/@novnc/novnc@1.5.0/core/rfb.js")')() as Promise<any>);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, no-new-func
+        const mod: any = await new Function(`return import("https://esm.sh/@novnc/novnc@1.5.0/core/rfb.js")`)();
         if (cancelled) return;
 
         const RFB = mod.default;
         rfb = new RFB(containerRef.current, wsUrl, {});
-        rfbRef.current = rfb;
+        rfb.viewOnly = false;
+        rfb.scaleViewport = true;
+        rfb.resizeSession = false;
+        rfb.showDotCursor = false;
 
-        const r = rfb as Record<string, unknown>;
-        r.viewOnly = false;
-        r.scaleViewport = true;
-        r.resizeSession = false;
-        r.showDotCursor = false;
-
-        (rfb as { addEventListener: (e: string, cb: () => void) => void }).addEventListener("connect", () => {
-          if (!cancelled) setStatus("");
-        });
-        (rfb as { addEventListener: (e: string, cb: () => void) => void }).addEventListener("disconnect", () => {
-          if (!cancelled) setStatus("Disconnected");
-        });
+        rfb.addEventListener("connect", () => { if (!cancelled) setStatus(""); });
+        rfb.addEventListener("disconnect", () => { if (!cancelled) setStatus("Disconnected"); });
       } catch (err) {
-        if (!cancelled) setStatus(`Failed to load VNC client: ${err}`);
+        if (!cancelled) setStatus(`VNC client error: ${err}`);
       }
     })();
 
     return () => {
       cancelled = true;
-      if (rfb) rfb.disconnect();
+      try { rfb?.disconnect(); } catch { /* ignore */ }
     };
   }, [host, port, path]);
 
