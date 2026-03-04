@@ -31,8 +31,34 @@ MAXRATE="${MAXRATE:-${AGENTREEL_MAXRATE}}"
 RESTART_DELAY="${RESTART_DELAY:-10}"
 RECORD_LOCAL="${RECORD_LOCAL:-false}"
 RECORDINGS_DIR="${RECORDINGS_DIR:-$HOME/recordings}"
+MUSIC_DIR="${MUSIC_DIR:-${AGENTREEL_DIR:-$HOME/.agentreel}/music}"
 
 log() { echo >&2 "[stream] $(date +"%Y-%m-%dT%H:%M:%SZ") $*"; }
+
+build_audio_input() {
+  if [[ -d "$MUSIC_DIR" ]]; then
+    local playlist="${MUSIC_DIR}/playlist.txt"
+    if [[ -f "$playlist" && -s "$playlist" ]]; then
+      log "Using music playlist: ${playlist}"
+      echo "-f concat -safe 0 -stream_loop -1 -i ${playlist}"
+      return
+    fi
+    local mp3_count
+    mp3_count=$(find "$MUSIC_DIR" -maxdepth 1 -name '*.mp3' 2>/dev/null | wc -l)
+    if [[ "$mp3_count" -gt 0 ]]; then
+      log "Found ${mp3_count} mp3 files, generating playlist..."
+      : > "$playlist"
+      find "$MUSIC_DIR" -maxdepth 1 -name '*.mp3' -print0 | sort -z | while IFS= read -r -d '' f; do
+        echo "file '${f}'" >> "$playlist"
+      done
+      log "Using music playlist: ${playlist} (${mp3_count} tracks)"
+      echo "-f concat -safe 0 -stream_loop -1 -i ${playlist}"
+      return
+    fi
+  fi
+  log "No music found in ${MUSIC_DIR}, using silent audio"
+  echo "-f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100"
+}
 
 build_tee_output() {
   local outputs="" count=0
@@ -70,11 +96,14 @@ run_stream() {
     log "Local recording enabled: ${segment_file}"
   fi
 
+  local audio_input
+  audio_input=$(build_audio_input)
+
   log "Starting ffmpeg (${RESOLUTION} @ ${FPS}fps, bitrate=${BITRATE}, maxrate=${MAXRATE})"
 
   ffmpeg \
     -f x11grab -video_size "${RESOLUTION}" -framerate "${FPS}" -i "${DISPLAY_NUM}" \
-    -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 \
+    ${audio_input} \
     -map 0:v -map 1:a \
     -c:v libx264 -preset veryfast -tune zerolatency \
     -b:v "${BITRATE}" -maxrate "${MAXRATE}" -bufsize "$((${MAXRATE%k} * 2))k" \
