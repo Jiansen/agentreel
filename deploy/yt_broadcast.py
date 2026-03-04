@@ -263,8 +263,19 @@ def cmd_rotate(api: YouTubeAPI, args: argparse.Namespace) -> None:
         log("No active broadcast to complete")
 
     title = args.title or f"AgentReel Live — {ts()}"
+    default_desc = (
+        "Watch a real AI agent browse websites, research topics, and "
+        "complete tasks in real-time. No editing — just raw autonomous AI.\n\n"
+        "🎵 Music by Kevin MacLeod (incompetech.com)\n"
+        "Licensed under Creative Commons: By Attribution 4.0\n"
+        "https://creativecommons.org/licenses/by/4.0/\n\n"
+        "🔗 AgentReel: https://agentreel.agent-status.com\n"
+        "🔗 GitHub: https://github.com/Jiansen/agentreel\n"
+        "🔗 Twitch: https://twitch.tv/jiansenhe\n\n"
+        "#AI #AIAgent #Autonomous #24x7 #AgentReel"
+    )
     log(f"Creating new broadcast: {title}")
-    broadcast = api.create_broadcast(title)
+    broadcast = api.create_broadcast(title, description=default_desc)
     bid = broadcast["id"]
     stream_id = args.stream_id or api.get_default_stream_id()
     api.bind_stream(bid, stream_id)
