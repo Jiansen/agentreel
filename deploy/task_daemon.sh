@@ -244,21 +244,50 @@ ensure_agent_chrome() {
   done
   [ -z "$chromium_cmd" ] && { log "WARN: no chromium found, skipping"; return 0; }
 
-  mkdir -p "${AGENT_CHROME_DIR}/Default"
-  python3 -c "
+  pkill -f "chromium.*${CDP_PORT}" 2>/dev/null || true
+  local _w=0
+  while pgrep -f "chromium.*${CDP_PORT}" >/dev/null 2>&1 && [ $_w -lt 10 ]; do
+    sleep 1; _w=$((_w+1))
+  done
+
+  # Fresh profile each restart avoids Snap Chromium's persistent "Restore pages?" dialog
+  local fresh_dir="/tmp/chromium-agent-$(date +%s)"
+  rm -rf "${AGENT_CHROME_DIR}" 2>/dev/null || true
+  mkdir -p "$fresh_dir/Default"
+  ln -sfn "$fresh_dir" "${AGENT_CHROME_DIR}" 2>/dev/null || AGENT_CHROME_DIR="$fresh_dir"
+
+  cat > "$fresh_dir/Default/Preferences" << 'PREFS'
+{"profile":{"exit_type":"Normal","exited_cleanly":true},"session":{"restore_on_startup":5},"browser":{"has_seen_welcome_page":true}}
+PREFS
+
+  # Snap Chromium stores crash/session state independently — clean it all
+  local snap_dir="$HOME/snap/chromium/common/chromium"
+  if [ -d "$snap_dir/Default" ]; then
+    rm -rf "$snap_dir/Default/Sessions" "$snap_dir/Default/Session Storage" 2>/dev/null
+    rm -f  "$snap_dir/Default/Current Session" "$snap_dir/Default/Current Tabs" \
+           "$snap_dir/Default/Last Session" "$snap_dir/Default/Last Tabs" 2>/dev/null
+    rm -rf "$snap_dir/Crash Reports" 2>/dev/null
+    python3 -c "
 import json
-try:
-    with open('${AGENT_CHROME_DIR}/Default/Preferences', 'r') as f:
-        p = json.load(f)
-    p.setdefault('profile', {})['exit_type'] = 'Normal'
-    p['profile']['exited_cleanly'] = True
-    with open('${AGENT_CHROME_DIR}/Default/Preferences', 'w') as f:
-        json.dump(p, f)
-except: pass
+for path in ['$snap_dir/Default/Preferences']:
+    try:
+        with open(path,'r') as f: p=json.load(f)
+        p.setdefault('profile',{})['exit_type']='Normal'
+        p['profile']['exited_cleanly']=True
+        p.setdefault('session',{})['restore_on_startup']=5
+        with open(path,'w') as f: json.dump(p,f)
+    except: pass
+for path in ['$snap_dir/Local State']:
+    try:
+        with open(path,'r') as f: s=json.load(f)
+        s.pop('recovery',None)
+        with open(path,'w') as f: json.dump(s,f)
+    except: pass
 " 2>/dev/null
+  fi
 
   DISPLAY="${AGENT_DISPLAY}" nohup "$chromium_cmd" \
-    --no-sandbox --disable-gpu \
+    --no-sandbox --disable-gpu --test-type \
     --remote-debugging-port="${CDP_PORT}" \
     --user-data-dir="${AGENT_CHROME_DIR}" \
     --window-size=1920,1080 \
@@ -266,11 +295,15 @@ except: pass
     --disable-session-crashed-bubble --disable-infobars \
     --disable-notifications --start-maximized \
     --noerrdialogs \
-    --disable-features=InfiniteSessionRestore \
+    --disable-features=InfiniteSessionRestore,SessionRestore \
+    --hide-crash-restore-bubble \
     "about:blank" \
     > "${AGENTREEL_LOG_DIR:-/tmp}/chromium-agent.log" 2>&1 &
   sleep 5
   DISPLAY="${AGENT_DISPLAY}" xdotool search --class "Chromium" windowmove 0 0 windowsize 1920 1080 2>/dev/null || true
+
+  # Cleanup old profiles (keep only current)
+  find /tmp -maxdepth 1 -name "chromium-agent-*" -not -name "$(basename "$fresh_dir")" -type d -mmin +5 -exec rm -rf {} + 2>/dev/null || true
 
   if curl -sf --max-time 3 "http://127.0.0.1:${CDP_PORT}/json/version" >/dev/null 2>&1; then
     log "Agent Chrome restarted on ${AGENT_DISPLAY} (CDP ${CDP_PORT})"

@@ -637,13 +637,40 @@ VNCEOF
       # 4b. Kiosk Chrome on broadcast display
       if ! pgrep -f "chromium.*kiosk.*live" >/dev/null 2>&1; then
         local live_url="http://localhost:${port}/live?vnc=http%3A%2F%2Flocalhost%3A${vnc_port}%2Fvnc_clean.html&relay=http%3A%2F%2Flocalhost%3A${relay_port}"
+        rm -rf /tmp/chromium-kiosk 2>/dev/null || true
+        mkdir -p /tmp/chromium-kiosk/Default
+        cat > /tmp/chromium-kiosk/Default/Preferences << 'KIOSK_PREFS'
+{"profile":{"exit_type":"Normal","exited_cleanly":true},"session":{"restore_on_startup":5},"browser":{"has_seen_welcome_page":true}}
+KIOSK_PREFS
+        # Clean Snap Chromium's independent session/crash state
+        local snap_dir="$HOME/snap/chromium/common/chromium"
+        if [ -d "$snap_dir/Default" ]; then
+          rm -rf "$snap_dir/Default/Sessions" "$snap_dir/Default/Session Storage" 2>/dev/null
+          rm -f  "$snap_dir/Default/Current Session" "$snap_dir/Default/Current Tabs" \
+                 "$snap_dir/Default/Last Session" "$snap_dir/Default/Last Tabs" 2>/dev/null
+          rm -rf "$snap_dir/Crash Reports" 2>/dev/null
+          python3 -c "
+import json
+for p in ['$snap_dir/Default/Preferences']:
+    try:
+        with open(p,'r') as f: d=json.load(f)
+        d.setdefault('profile',{})['exit_type']='Normal'
+        d['profile']['exited_cleanly']=True
+        d.setdefault('session',{})['restore_on_startup']=5
+        with open(p,'w') as f: json.dump(d,f)
+    except: pass
+" 2>/dev/null || true
+        fi
         DISPLAY="$broadcast_display" nohup "$chromium_cmd" \
-          --no-sandbox --disable-gpu \
+          --no-sandbox --disable-gpu --test-type \
           --user-data-dir=/tmp/chromium-kiosk \
           --window-size="${resolution%%x*},${resolution##*x}" \
           --no-first-run --disable-background-timer-throttling \
           --disable-session-crashed-bubble --disable-infobars \
-          --disable-notifications --kiosk "$live_url" \
+          --disable-notifications --noerrdialogs \
+          --disable-features=InfiniteSessionRestore,SessionRestore \
+          --hide-crash-restore-bubble \
+          --kiosk "$live_url" \
           > "$AGENTREEL_DIR/logs/chromium-kiosk.log" 2>&1 &
         echo $! > "$AGENTREEL_DIR/pids/chromium-kiosk.pid"
         sleep 3
