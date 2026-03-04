@@ -12,7 +12,7 @@ export AGENTREEL_DIR="${AGENTREEL_DIR:-$HOME/.agentreel}"
 export AGENTREEL_WATCH_DIR="${AGENTREEL_WATCH_DIR:-$HOME/.openclaw/agents/main/sessions/}"
 export AGENTREEL_NOVNC_DIR="${AGENTREEL_NOVNC_DIR:-/usr/share/novnc}"
 export AGENTREEL_SKILL_DIR="${AGENTREEL_SKILL_DIR:-$HOME/.openclaw/skills/agentreel}"
-export AGENTREEL_CHROME_DIR="${AGENTREEL_CHROME_DIR:-$HOME/.config/agentreel-chrome}"
+export AGENTREEL_CHROME_DIR="${AGENTREEL_CHROME_DIR:-/tmp/chromium-agent}"
 
 # ── Ports ──────────────────────────────────────────────────
 export AGENTREEL_PORT="${AGENTREEL_PORT:-3000}"
@@ -28,8 +28,8 @@ export AGENTREEL_RESOLUTION="${AGENTREEL_RESOLUTION:-1920x1080}"
 export AGENTREEL_NO_DESKTOP="${AGENTREEL_NO_DESKTOP:-0}"
 
 # ── Streaming ──────────────────────────────────────────────
-export AGENTREEL_BITRATE="${AGENTREEL_BITRATE:-4500k}"
-export AGENTREEL_MAXRATE="${AGENTREEL_MAXRATE:-6000k}"
+export AGENTREEL_BITRATE="${AGENTREEL_BITRATE:-6000k}"
+export AGENTREEL_MAXRATE="${AGENTREEL_MAXRATE:-7500k}"
 export AGENTREEL_FPS="${AGENTREEL_FPS:-30}"
 
 # ── Agent Chrome flags ─────────────────────────────────────

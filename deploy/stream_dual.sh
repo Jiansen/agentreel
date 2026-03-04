@@ -27,6 +27,7 @@ DISPLAY_NUM="${DISPLAY_NUM:-${AGENTREEL_BROADCAST_DISPLAY}}"
 RESOLUTION="${RESOLUTION:-${AGENTREEL_RESOLUTION}}"
 FPS="${FPS:-${AGENTREEL_FPS}}"
 BITRATE="${BITRATE:-${AGENTREEL_BITRATE}}"
+MAXRATE="${MAXRATE:-${AGENTREEL_MAXRATE}}"
 RESTART_DELAY="${RESTART_DELAY:-10}"
 RECORD_LOCAL="${RECORD_LOCAL:-false}"
 RECORDINGS_DIR="${RECORDINGS_DIR:-$HOME/recordings}"
@@ -69,14 +70,14 @@ run_stream() {
     log "Local recording enabled: ${segment_file}"
   fi
 
-  log "Starting ffmpeg (${RESOLUTION} @ ${FPS}fps, ${BITRATE})"
+  log "Starting ffmpeg (${RESOLUTION} @ ${FPS}fps, bitrate=${BITRATE}, maxrate=${MAXRATE})"
 
   ffmpeg \
     -f x11grab -video_size "${RESOLUTION}" -framerate "${FPS}" -i "${DISPLAY_NUM}" \
     -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 \
     -map 0:v -map 1:a \
     -c:v libx264 -preset veryfast -tune zerolatency \
-    -maxrate "${BITRATE}" -bufsize "$((${BITRATE%k} * 2))k" \
+    -b:v "${BITRATE}" -maxrate "${MAXRATE}" -bufsize "$((${MAXRATE%k} * 2))k" \
     -pix_fmt yuv420p -g $((FPS * 2)) \
     -c:a aac -b:a 128k -ar 44100 \
     -f tee "${tee_output}"
