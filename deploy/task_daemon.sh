@@ -257,7 +257,7 @@ ensure_agent_chrome() {
   ln -sfn "$fresh_dir" "${AGENT_CHROME_DIR}" 2>/dev/null || AGENT_CHROME_DIR="$fresh_dir"
 
   cat > "$fresh_dir/Default/Preferences" << 'PREFS'
-{"profile":{"exit_type":"Normal","exited_cleanly":true},"session":{"restore_on_startup":5},"browser":{"has_seen_welcome_page":true}}
+{"profile":{"exit_type":"Normal","exited_cleanly":true},"session":{"restore_on_startup":5},"browser":{"has_seen_welcome_page":true,"command_line_flag_security_warnings_enabled":false}}
 PREFS
 
   # Snap Chromium stores crash/session state independently — clean it all
@@ -275,6 +275,7 @@ for path in ['$snap_dir/Default/Preferences']:
         p.setdefault('profile',{})['exit_type']='Normal'
         p['profile']['exited_cleanly']=True
         p.setdefault('session',{})['restore_on_startup']=5
+        p.setdefault('browser',{})['command_line_flag_security_warnings_enabled']=False
         with open(path,'w') as f: json.dump(p,f)
     except: pass
 for path in ['$snap_dir/Local State']:
@@ -297,6 +298,7 @@ for path in ['$snap_dir/Local State']:
     --noerrdialogs \
     --disable-features=InfiniteSessionRestore,SessionRestore \
     --hide-crash-restore-bubble \
+    --enable-automation \
     "about:blank" \
     > "${AGENTREEL_LOG_DIR:-/tmp}/chromium-agent.log" 2>&1 &
   sleep 5

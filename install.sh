@@ -640,7 +640,7 @@ VNCEOF
         rm -rf /tmp/chromium-kiosk 2>/dev/null || true
         mkdir -p /tmp/chromium-kiosk/Default
         cat > /tmp/chromium-kiosk/Default/Preferences << 'KIOSK_PREFS'
-{"profile":{"exit_type":"Normal","exited_cleanly":true},"session":{"restore_on_startup":5},"browser":{"has_seen_welcome_page":true}}
+{"profile":{"exit_type":"Normal","exited_cleanly":true},"session":{"restore_on_startup":5},"browser":{"has_seen_welcome_page":true,"command_line_flag_security_warnings_enabled":false}}
 KIOSK_PREFS
         # Clean Snap Chromium's independent session/crash state
         local snap_dir="$HOME/snap/chromium/common/chromium"
@@ -657,6 +657,7 @@ for p in ['$snap_dir/Default/Preferences']:
         d.setdefault('profile',{})['exit_type']='Normal'
         d['profile']['exited_cleanly']=True
         d.setdefault('session',{})['restore_on_startup']=5
+        d.setdefault('browser',{})['command_line_flag_security_warnings_enabled']=False
         with open(p,'w') as f: json.dump(d,f)
     except: pass
 " 2>/dev/null || true
@@ -670,6 +671,7 @@ for p in ['$snap_dir/Default/Preferences']:
           --disable-notifications --noerrdialogs \
           --disable-features=InfiniteSessionRestore,SessionRestore \
           --hide-crash-restore-bubble \
+          --enable-automation \
           --kiosk "$live_url" \
           > "$AGENTREEL_DIR/logs/chromium-kiosk.log" 2>&1 &
         echo $! > "$AGENTREEL_DIR/pids/chromium-kiosk.pid"
