@@ -334,6 +334,8 @@ run_task() {
   start_ts=$(date +%s)
   result_file="${QUEUE_DIR}/last_result.json"
 
+  echo "{\"label\":\"${label}\",\"session\":\"${session_id}\",\"started\":$(date +%s)}" > "${QUEUE_DIR}/.task_active"
+
   DISPLAY="${AGENT_DISPLAY}" openclaw agent \
     --local \
     --session-id "$session_id" \
@@ -369,6 +371,7 @@ run_task() {
 
   wait "$agent_pid" 2>/dev/null
   exit_code=$?
+  rm -f "${QUEUE_DIR}/.task_active"
 
   local dur=$(( $(date +%s) - start_ts ))
   record_api_call

@@ -31,6 +31,7 @@ MAXRATE="${MAXRATE:-${AGENTREEL_MAXRATE}}"
 RESTART_DELAY="${RESTART_DELAY:-10}"
 RECORD_LOCAL="${RECORD_LOCAL:-false}"
 RECORDINGS_DIR="${RECORDINGS_DIR:-$HOME/recordings}"
+PRESET="${PRESET:-${AGENTREEL_PRESET:-veryfast}}"
 MUSIC_DIR="${MUSIC_DIR:-${AGENTREEL_DIR:-$HOME/.agentreel}/music}"
 
 log() { echo >&2 "[stream] $(date +"%Y-%m-%dT%H:%M:%SZ") $*"; }
@@ -99,22 +100,36 @@ run_stream() {
   local audio_input
   audio_input=$(build_audio_input)
 
-  log "Starting ffmpeg (${RESOLUTION} @ ${FPS}fps, bitrate=${BITRATE}, maxrate=${MAXRATE})"
+  log "Starting ffmpeg (${RESOLUTION} @ ${FPS}fps, bitrate=${BITRATE}, maxrate=${MAXRATE}, preset=${PRESET})"
 
   ffmpeg \
     -f x11grab -video_size "${RESOLUTION}" -framerate "${FPS}" -i "${DISPLAY_NUM}" \
     ${audio_input} \
     -map 0:v -map 1:a \
-    -c:v libx264 -preset veryfast -tune zerolatency \
+    -c:v libx264 -preset "${PRESET}" -tune zerolatency \
     -b:v "${BITRATE}" -maxrate "${MAXRATE}" -bufsize "$((${MAXRATE%k} * 2))k" \
     -pix_fmt yuv420p -g $((FPS * 2)) \
     -c:a aac -b:a 128k -ar 44100 \
     -f tee "${tee_output}"
 }
 
+preflight_check() {
+  local ok=true
+  if [[ -z "${YT_STREAM_KEY:-}" && -z "${TW_STREAM_KEY:-}" ]]; then
+    log "FATAL: No stream keys configured"
+    ok=false
+  fi
+  if ! xdpyinfo -display "${DISPLAY_NUM}" &>/dev/null; then
+    log "FATAL: Display ${DISPLAY_NUM} not available"
+    ok=false
+  fi
+  $ok
+}
+
 log "=== AgentReel Dual Stream ==="
-while true; do
-  run_stream || true
-  log "Stream ended. Restarting in ${RESTART_DELAY}s..."
-  sleep "$RESTART_DELAY"
-done
+if ! preflight_check; then
+  log "Preflight failed. Exiting (systemd will handle restart)."
+  exit 1
+fi
+run_stream
+log "Stream ended with exit code $?. Exiting (systemd will handle restart)."
