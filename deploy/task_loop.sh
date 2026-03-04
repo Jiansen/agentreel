@@ -5,18 +5,23 @@ export TZ=UTC
 # AgentReel Task Loop — Loads tasks from a JSON config file.
 #
 # Usage:
-#   ZAI_API_KEY="..." ./task_loop.sh                              # uses tasks-example.json
-#   ZAI_API_KEY="..." TASK_CONFIG=tasks-livestream.json ./task_loop.sh
+#   ./task_loop.sh                              # uses tasks-example.json
+#   TASK_CONFIG=tasks-livestream.json ./task_loop.sh
 #
 # Environment:
-#   ZAI_API_KEY       — Required. API key for the model provider.
 #   TASK_CONFIG       — Path to task config JSON (default: tasks-example.json in same dir)
 #   TASK_TIMEOUT      — Override: max seconds per task
 #   TASK_PAUSE        — Override: seconds between tasks
 #   MAX_FAILURES      — Override: consecutive failures before cooldown
 #   COOLDOWN          — Override: cooldown seconds after max failures
+#
+# Note: Model provider API keys are managed by OpenClaw, not AgentReel.
+# Configure them via: openclaw configure
 
-ZAI_API_KEY="${ZAI_API_KEY:?Set ZAI_API_KEY}"
+if ! command -v openclaw &>/dev/null; then
+  echo "ERROR: openclaw not found. Install OpenClaw first." >&2
+  exit 1
+fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TASK_CONFIG="${TASK_CONFIG:-${SCRIPT_DIR}/tasks-example.json}"

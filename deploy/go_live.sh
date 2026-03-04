@@ -8,8 +8,8 @@ export TZ=UTC
 # Starts: VNC → relay server → task loop → desktop layout → (optional) RTMP stream → watchdog
 #
 # Usage:
-#   ZAI_API_KEY="..." ./go_live.sh
-#   source ~/stream.env && ZAI_API_KEY="..." ./go_live.sh
+#   ./go_live.sh
+#   source ~/stream.env && ./go_live.sh
 #
 # Prerequisites:
 #   - Server set up with deploy/setup_server.sh
@@ -24,7 +24,10 @@ _config="${SCRIPT_DIR}/../lib/config.sh"
 [ -f "$_config" ] && . "$_config"
 [ -f "${AGENTREEL_DIR:-$HOME/.agentreel}/lib/config.sh" ] && . "${AGENTREEL_DIR:-$HOME/.agentreel}/lib/config.sh"
 
-ZAI_API_KEY="${ZAI_API_KEY:?Set ZAI_API_KEY for OpenClaw model provider}"
+if ! command -v openclaw &>/dev/null; then
+  echo "ERROR: openclaw not found. Install OpenClaw first." >&2
+  exit 1
+fi
 RELAY_PORT="${AGENTREEL_RELAY_PORT}"
 
 log() { echo "[go-live] $(date +"%Y-%m-%dT%H:%M:%SZ") $*"; }
@@ -57,7 +60,7 @@ log "relay PID: $(cat ~/pids/relay.pid)"
 log "[3/6] Starting task loop..."
 pkill -f "task_loop.sh" 2>/dev/null || true
 sleep 1
-nohup bash -c "export ZAI_API_KEY='${ZAI_API_KEY}' && bash ~/task_loop.sh" \
+nohup bash ~/task_loop.sh \
   > ~/logs/task_loop.log 2>&1 &
 echo $! > ~/pids/tasks.pid
 log "tasks PID: $(cat ~/pids/tasks.pid)"

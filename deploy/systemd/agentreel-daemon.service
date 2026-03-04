@@ -10,7 +10,6 @@ Restart=always
 RestartSec=10
 Environment=HOME=/home/ubuntu
 EnvironmentFile=-/home/ubuntu/.agentreel/config.env
-EnvironmentFile=-/home/ubuntu/stream.env
 WorkingDirectory=/home/ubuntu
 User=ubuntu
 KillMode=mixed

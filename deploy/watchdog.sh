@@ -10,10 +10,9 @@ export TZ=UTC
 #   ~/pids/tasks.pid   — task_daemon.sh
 #   ~/pids/stream.pid  — stream_dual.sh (only if stream keys configured)
 #
-# Usage: ZAI_API_KEY="..." ./watchdog.sh
+# Usage: ./watchdog.sh
 #
 # Environment:
-#   ZAI_API_KEY       — Required for task_daemon restart
 #   CHECK_INTERVAL    — Seconds between checks (default: 30)
 
 # Load centralized config
@@ -23,7 +22,6 @@ _config="${SCRIPT_DIR}/../lib/config.sh"
 [ -f "${AGENTREEL_DIR:-$HOME/.agentreel}/lib/config.sh" ] && . "${AGENTREEL_DIR:-$HOME/.agentreel}/lib/config.sh"
 
 LOCK_FILE="/tmp/agentreel-watchdog.lock"
-ZAI_API_KEY="${ZAI_API_KEY:-}"
 PID_DIR="${AGENTREEL_PID_DIR}"
 CHECK_INTERVAL="${CHECK_INTERVAL:-30}"
 MAX_RESTART_BURST=3
@@ -113,7 +111,7 @@ restart_relay() {
 restart_tasks() {
   restart_allowed tasks || return 0
   log "Starting task_daemon.sh"
-  nohup bash -c "export ZAI_API_KEY='${ZAI_API_KEY:-}' && bash ~/task_daemon.sh" \
+  nohup bash ~/task_daemon.sh \
     > "${AGENTREEL_LOG_DIR}/task_daemon.log" 2>&1 &
   echo $! > "${PID_DIR}/tasks.pid"
   log "tasks PID: $(cat "${PID_DIR}/tasks.pid")"

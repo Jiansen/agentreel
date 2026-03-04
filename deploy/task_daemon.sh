@@ -26,7 +26,6 @@ export TZ=UTC
 #   ./task_daemon.sh --enqueue "msg"     # Manually enqueue a task
 #
 # Environment:
-#   ZAI_API_KEY       — Required for worker mode
 #   MIN_INTERVAL      — Min seconds between tasks (default: 180)
 #   MAX_INTERVAL      — Max backoff seconds (default: 900)
 #   TASK_TIMEOUT      — Per-task timeout (default: 600)
@@ -525,7 +524,10 @@ cmd_feed() {
 # ─── Main daemon loop ───
 
 cmd_daemon() {
-  ZAI_API_KEY="${ZAI_API_KEY:?Set ZAI_API_KEY}"
+  if ! command -v openclaw &>/dev/null; then
+    echo "ERROR: openclaw not found. Install OpenClaw first." >&2
+    exit 1
+  fi
   ensure_dirs
 
   if pid=$(check_pid); then

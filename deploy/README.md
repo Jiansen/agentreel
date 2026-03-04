@@ -20,7 +20,7 @@ vncpasswd
 openclaw configure
 
 # 5. Go live
-ZAI_API_KEY="your-key" ~/go_live.sh
+~/go_live.sh
 ```
 
 ## What Each Script Does
@@ -79,7 +79,7 @@ No manual "Go Live" step needed. Stream starts when ffmpeg connects.
 ### 4. Start streaming
 
 ```bash
-source ~/stream.env && ZAI_API_KEY="..." ~/go_live.sh
+source ~/stream.env && ~/go_live.sh
 ```
 
 ### Troubleshooting

@@ -1119,11 +1119,10 @@ m=d.get('models',{})
 names=[v.get('model','') for v in m.values() if isinstance(v,dict)]
 print(','.join(names))
 " 2>/dev/null || echo "")
-      if echo "$models" | grep -qi "vision\|4.6v\|4o\|gpt-4-v"; then
-        has_vision="true"
-        vision_hint="Use the image tool with browser screenshots for visual QA"
+      if [ -n "$models" ]; then
+        vision_hint="Models configured: ${models}. Most modern models support image input — try browser screenshot + image tool for visual QA."
       else
-        vision_hint="No dedicated vision model detected. Use browser snapshot (DOM) for structural checks. If your model supports image input, try browser screenshot + image tool."
+        vision_hint="No models detected in OpenClaw config. Use browser snapshot (DOM) for structural checks, or configure a model with: openclaw configure"
       fi
     fi
     cat <<AGENTEOF

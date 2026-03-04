@@ -110,7 +110,7 @@ Or visit [/live](https://agentreel.agent-status.com/live) and enter the URL manu
 
 ```bash
 # Run an OpenClaw task (generates a JSONL session the relay picks up)
-export ZAI_API_KEY="your-key"
+# Configure your model provider first: openclaw configure
 openclaw agent --local --session-id my-task --message "Analyze this server"
 ```
 
