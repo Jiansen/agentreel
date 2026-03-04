@@ -359,7 +359,11 @@ create_cli() {
 set -euo pipefail
 
 AGENTREEL_DIR="${AGENTREEL_DIR:-$HOME/.agentreel}"
-CONFIG_FILE="$AGENTREEL_DIR/.agentreel-config.json"
+
+# Load centralized config (sets all AGENTREEL_* defaults + user overrides)
+[ -f "$AGENTREEL_DIR/lib/config.sh" ] && . "$AGENTREEL_DIR/lib/config.sh"
+
+CONFIG_FILE="${AGENTREEL_CONFIG_FILE:-$AGENTREEL_DIR/.agentreel-config.json}"
 
 get_local_version() {
   if [ -f "$AGENTREEL_DIR/VERSION" ]; then
@@ -446,24 +450,24 @@ except Exception as e:
 
 cmd_start() {
   local port
-  port=$(find_port "${AGENTREEL_PORT:-3000}")
+  port=$(find_port "${AGENTREEL_PORT}")
   local relay_port
-  relay_port=$(find_port "${AGENTREEL_RELAY_PORT:-8765}")
-  local watch_dir="${AGENTREEL_WATCH_DIR:-$HOME/.openclaw/agents/main/sessions/}"
-  local display_num="${AGENTREEL_DISPLAY:-:99}"
-  local resolution="${AGENTREEL_RESOLUTION:-1920x1080}"
+  relay_port=$(find_port "${AGENTREEL_RELAY_PORT}")
+  local watch_dir="${AGENTREEL_WATCH_DIR}"
+  local display_num="${AGENTREEL_DISPLAY}"
+  local resolution="${AGENTREEL_RESOLUTION}"
 
   echo "Starting AgentReel (v$(get_local_version))..."
   check_update
 
-  mkdir -p "$AGENTREEL_DIR/logs" "$AGENTREEL_DIR/pids"
+  mkdir -p "${AGENTREEL_LOG_DIR}" "${AGENTREEL_PID_DIR}"
 
   # 1. Desktop — dual Xvfb displays
-  #   :99 = agent workspace (OpenClaw browser, captured by VNC)
-  #   :100 = broadcast kiosk (Chromium showing /live with VNC of :99, captured by ffmpeg)
+  #   agent display = agent workspace (OpenClaw browser, captured by VNC)
+  #   broadcast display = kiosk (Chromium showing /live with VNC, captured by ffmpeg)
   local desktop_enabled=false
-  local broadcast_display="${AGENTREEL_BROADCAST_DISPLAY:-:100}"
-  if command -v Xvfb &>/dev/null && [ "${AGENTREEL_NO_DESKTOP:-0}" != "1" ]; then
+  local broadcast_display="${AGENTREEL_BROADCAST_DISPLAY}"
+  if command -v Xvfb &>/dev/null && [ "${AGENTREEL_NO_DESKTOP}" != "1" ]; then
     desktop_enabled=true
     if ! pgrep -f "Xvfb ${display_num}" >/dev/null 2>&1; then
       Xvfb "$display_num" -screen 0 "${resolution}x24" -ac &
@@ -553,15 +557,15 @@ cmd_start() {
         sleep 2
       done
 
-      local cdp_port="${AGENTREEL_CDP_PORT:-18802}"
-      local vnc_port="${AGENTREEL_VNC_WS_PORT:-6080}"
+      local cdp_port="${AGENTREEL_CDP_PORT}"
+      local vnc_port="${AGENTREEL_VNC_WS_PORT}"
 
       # 4a. Agent Chrome on agent display with CDP
       if ! pgrep -f "chromium.*remote-debugging-port=${cdp_port}" >/dev/null 2>&1; then
         DISPLAY="$display_num" nohup "$chromium_cmd" \
           --no-sandbox --disable-gpu \
           --remote-debugging-port="$cdp_port" \
-          --user-data-dir=/tmp/chromium-agent \
+          --user-data-dir="${AGENTREEL_CHROME_DIR}" \
           --window-size="${resolution%%x*},${resolution##*x}" \
           --no-first-run --disable-background-timer-throttling \
           --disable-session-crashed-bubble --disable-infobars \
@@ -613,17 +617,18 @@ VNCEOF
       fi
 
       # 4a.3 x11vnc + websockify (bridge agent display to browser VNC)
+      local vnc_rfb="${AGENTREEL_VNC_RFB_PORT}"
       if command -v x11vnc &>/dev/null; then
         if ! pgrep -f "x11vnc.*display ${display_num}" >/dev/null 2>&1; then
-          x11vnc -display "$display_num" -rfbport 5999 -nopw -shared -forever -bg \
-            > "$AGENTREEL_DIR/logs/x11vnc.log" 2>&1 || true
-          echo "  x11vnc: capturing ${display_num} → rfbport 5999"
+          x11vnc -display "$display_num" -rfbport "${vnc_rfb}" -nopw -shared -forever -bg \
+            > "${AGENTREEL_LOG_DIR}/x11vnc.log" 2>&1 || true
+          echo "  x11vnc: capturing ${display_num} → rfbport ${vnc_rfb}"
         fi
       fi
       if command -v websockify &>/dev/null; then
         if ! pgrep -f "websockify.*${vnc_port}" >/dev/null 2>&1; then
-          nohup websockify --web /usr/share/novnc "$vnc_port" localhost:5999 \
-            > "$AGENTREEL_DIR/logs/websockify.log" 2>&1 &
+          nohup websockify --web "${AGENTREEL_NOVNC_DIR}" "$vnc_port" "localhost:${vnc_rfb}" \
+            > "${AGENTREEL_LOG_DIR}/websockify.log" 2>&1 &
           echo $! > "$AGENTREEL_DIR/pids/websockify.pid"
           echo "  websockify: ws://localhost:${vnc_port}"
         fi
@@ -815,25 +820,54 @@ cmd_doctor() {
   local pass=0 warn_count=0 fail_count=0 total=0
   local report_lines=""
   local DOCTOR_REPORT_URL="https://agentreel.agent-status.com/api/install-report"
+  local agent_mode=false
+  local json_checks=""
+
+  # Parse flags
+  for arg in "$@"; do
+    case "$arg" in
+      --agent) agent_mode=true ;;
+    esac
+  done
 
   _check() {
     local status="$1" label="$2" detail="$3"
     total=$(( total + 1 ))
     case "$status" in
-      PASS) pass=$(( pass + 1 )); echo "  ✅ $label  $detail" ;;
-      WARN) warn_count=$(( warn_count + 1 )); echo "  ⚠️  $label  $detail" ;;
-      FAIL) fail_count=$(( fail_count + 1 )); echo "  ❌ $label  $detail" ;;
+      PASS) pass=$(( pass + 1 )) ;;
+      WARN) warn_count=$(( warn_count + 1 )) ;;
+      FAIL) fail_count=$(( fail_count + 1 )) ;;
     esac
     report_lines="${report_lines}${status}|${label}|${detail}\n"
+
+    if [ "$agent_mode" = true ]; then
+      local id
+      id=$(echo "$label" | tr '[:upper:] ' '[:lower:]_' | tr -cd 'a-z0-9_')
+      [ -n "$json_checks" ] && json_checks="${json_checks},"
+      json_checks="${json_checks}{\"id\":\"${id}\",\"status\":\"${status}\",\"label\":\"${label}\",\"detail\":\"$(echo "$detail" | sed 's/"/\\"/g')\"}"
+    else
+      case "$status" in
+        PASS) echo "  ✅ $label  $detail" ;;
+        WARN) echo "  ⚠️  $label  $detail" ;;
+        FAIL) echo "  ❌ $label  $detail" ;;
+      esac
+    fi
   }
 
-  _suggest() { echo "     → $1"; }
+  _suggest() {
+    [ "$agent_mode" = true ] && return 0
+    echo "     → $1"
+  }
 
-  echo ""
-  echo "AgentReel Doctor v$(get_local_version) — Full System Check"
-  check_update
-  echo "═══════════════════════════════════════"
-  echo ""
+  if [ "$agent_mode" = true ]; then
+    : # silent header for agent mode
+  else
+    echo ""
+    echo "AgentReel Doctor v$(get_local_version) — Full System Check"
+    check_update
+    echo "═══════════════════════════════════════"
+    echo ""
+  fi
 
   # 1. Build
   if [ -f "$AGENTREEL_DIR/.next/BUILD_ID" ]; then
@@ -962,7 +996,7 @@ cmd_doctor() {
   fi
 
   # 7. Skill
-  local skill_path="$HOME/.openclaw/skills/agentreel/SKILL.md"
+  local skill_path="${AGENTREEL_SKILL_DIR:-$HOME/.openclaw/skills/agentreel}/SKILL.md"
   if [ -f "$skill_path" ]; then
     _check PASS "Skill" "$skill_path present"
   elif [ -d "$HOME/.openclaw" ]; then
@@ -1068,6 +1102,58 @@ cmd_doctor() {
     else
       _check WARN "Kiosk Chrome" "not running (needed for streaming)"
     fi
+  fi
+
+  # Agent mode: output JSON and exit
+  if [ "$agent_mode" = true ]; then
+    local vport="${AGENTREEL_PORT:-3000}"
+    local rport="${AGENTREEL_RELAY_PORT:-8765}"
+    local has_vision="false"
+    local vision_hint="unknown"
+    if [ -f "$HOME/.openclaw/openclaw.json" ]; then
+      local models
+      models=$(python3 -c "
+import json
+d=json.load(open('$HOME/.openclaw/openclaw.json'))
+m=d.get('models',{})
+names=[v.get('model','') for v in m.values() if isinstance(v,dict)]
+print(','.join(names))
+" 2>/dev/null || echo "")
+      if echo "$models" | grep -qi "vision\|4.6v\|4o\|gpt-4-v"; then
+        has_vision="true"
+        vision_hint="Use the image tool with browser screenshots for visual QA"
+      else
+        vision_hint="No dedicated vision model detected. Use browser snapshot (DOM) for structural checks. If your model supports image input, try browser screenshot + image tool."
+      fi
+    fi
+    cat <<AGENTEOF
+{
+  "version": "doctor-agent-1.0",
+  "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date -u +"%Y-%m-%dT%H:%M:%S")",
+  "summary": {"total": $total, "pass": $pass, "warn": $warn_count, "fail": $fail_count},
+  "checks": [${json_checks}],
+  "endpoints": {
+    "viewer": "http://localhost:${vport}",
+    "live": "http://localhost:${vport}/live",
+    "relay_health": "http://localhost:${rport}/health",
+    "relay_stream": "http://localhost:${rport}/api/stream",
+    "relay_history": "http://localhost:${rport}/api/history",
+    "vnc_status": "http://localhost:${vport}/api/vnc-status"
+  },
+  "vision": {
+    "has_vision_model": ${has_vision},
+    "hint": "${vision_hint}",
+    "visual_qa_doc": "See AGENT_QA.md Section 2 for screenshot-based visual checks"
+  },
+  "next_steps": [
+    $([ "$fail_count" -gt 0 ] && echo '"Fix FAIL items before proceeding to visual QA",' || true)
+    "Run visual QA checks per AGENT_QA.md Section 2 (requires browser + image tools)",
+    "Run functional QA checks per AGENT_QA.md Section 3",
+    "Generate report in AGENT_QA.md Section 4 format"
+  ]
+}
+AGENTEOF
+    return 0
   fi
 
   # Summary

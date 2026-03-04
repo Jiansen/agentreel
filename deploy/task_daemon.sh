@@ -36,6 +36,13 @@ export TZ=UTC
 #   TELEGRAM_YIELD    — Seconds to yield after Telegram activity (default: 300)
 #   INTERRUPT_POLL    — Seconds between Telegram checks during task execution (default: 10)
 
+# Load centralized config
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_config="${SCRIPT_DIR}/../lib/config.sh"
+[ -f "$_config" ] && . "$_config"
+# Fallback: try installed location
+[ -f "${AGENTREEL_DIR:-$HOME/.agentreel}/lib/config.sh" ] && . "${AGENTREEL_DIR:-$HOME/.agentreel}/lib/config.sh"
+
 QUEUE_DIR="${HOME}/task_queue"
 PENDING="${QUEUE_DIR}/pending"
 DONE="${QUEUE_DIR}/done"
@@ -182,7 +189,7 @@ seconds_since_last_call() {
 
 # ─── Browser cleanup ───
 
-CDP_PORT="${AGENTREEL_CDP_PORT:-18802}"
+CDP_PORT="${AGENTREEL_CDP_PORT}"
 
 cleanup_agent_browser() {
   local cdp="http://127.0.0.1:${CDP_PORT}"
@@ -222,8 +229,8 @@ except: pass
 
 # ─── Agent Chrome watchdog ───
 
-AGENT_DISPLAY="${AGENTREEL_DISPLAY:-:99}"
-AGENT_CHROME_DIR="/tmp/chromium-agent"
+AGENT_DISPLAY="${AGENTREEL_DISPLAY}"
+AGENT_CHROME_DIR="${AGENTREEL_CHROME_DIR}"
 
 ensure_agent_chrome() {
   if curl -sf --max-time 3 "http://127.0.0.1:${CDP_PORT}/json/version" >/dev/null 2>&1; then
@@ -262,7 +269,7 @@ except: pass
     --noerrdialogs \
     --disable-features=InfiniteSessionRestore \
     "about:blank" \
-    > /tmp/chromium-agent.log 2>&1 &
+    > "${AGENTREEL_LOG_DIR:-/tmp}/chromium-agent.log" 2>&1 &
   sleep 5
   DISPLAY="${AGENT_DISPLAY}" xdotool search --class "Chromium" windowmove 0 0 windowsize 1920 1080 2>/dev/null || true
 
@@ -293,7 +300,7 @@ run_task() {
   start_ts=$(date +%s)
   result_file="${QUEUE_DIR}/last_result.json"
 
-  DISPLAY=:99 openclaw agent \
+  DISPLAY="${AGENT_DISPLAY}" openclaw agent \
     --local \
     --session-id "$session_id" \
     --message "$message" \

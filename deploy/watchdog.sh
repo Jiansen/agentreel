@@ -16,11 +16,15 @@ export TZ=UTC
 #   ZAI_API_KEY       — Required for task_daemon restart
 #   CHECK_INTERVAL    — Seconds between checks (default: 30)
 
+# Load centralized config
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_config="${SCRIPT_DIR}/../lib/config.sh"
+[ -f "$_config" ] && . "$_config"
+[ -f "${AGENTREEL_DIR:-$HOME/.agentreel}/lib/config.sh" ] && . "${AGENTREEL_DIR:-$HOME/.agentreel}/lib/config.sh"
+
 LOCK_FILE="/tmp/agentreel-watchdog.lock"
-AGENTREEL_DIR="${AGENTREEL_DIR:-$HOME/.agentreel}"
 ZAI_API_KEY="${ZAI_API_KEY:-}"
-[[ -f ~/stream.env ]] && source ~/stream.env
-PID_DIR="${AGENTREEL_DIR}/pids"
+PID_DIR="${AGENTREEL_PID_DIR}"
 CHECK_INTERVAL="${CHECK_INTERVAL:-30}"
 MAX_RESTART_BURST=3
 BURST_WINDOW=300
@@ -88,7 +92,7 @@ is_alive() {
 restart_relay() {
   restart_allowed relay || return 0
   log "Starting relay_server.py"
-  local relay_port="${RELAY_PORT:-8765}"
+  local relay_port="${AGENTREEL_RELAY_PORT}"
 
   local stale
   stale=$(lsof -ti:"$relay_port" 2>/dev/null || true)
@@ -98,10 +102,10 @@ restart_relay() {
     sleep 1
   fi
 
-  nohup python3 "${AGENTREEL_DIR}/relay_server.py" \
-    --watch-dir ~/.openclaw/agents/main/sessions/ \
+  nohup python3 "${AGENTREEL_DIR}/server/relay_server.py" \
+    --watch-dir "${AGENTREEL_WATCH_DIR}" \
     --port "$relay_port" \
-    > "${AGENTREEL_DIR}/logs/relay.log" 2>&1 &
+    > "${AGENTREEL_LOG_DIR}/relay.log" 2>&1 &
   echo $! > "${PID_DIR}/relay.pid"
   log "relay PID: $(cat "${PID_DIR}/relay.pid")"
 }
@@ -110,7 +114,7 @@ restart_tasks() {
   restart_allowed tasks || return 0
   log "Starting task_daemon.sh"
   nohup bash -c "export ZAI_API_KEY='${ZAI_API_KEY:-}' && bash ~/task_daemon.sh" \
-    > "${AGENTREEL_DIR}/logs/task_daemon.log" 2>&1 &
+    > "${AGENTREEL_LOG_DIR}/task_daemon.log" 2>&1 &
   echo $! > "${PID_DIR}/tasks.pid"
   log "tasks PID: $(cat "${PID_DIR}/tasks.pid")"
 }
@@ -128,7 +132,7 @@ restart_stream() {
     sleep 2
   fi
 
-  nohup bash ~/stream_dual.sh > "${AGENTREEL_DIR}/logs/stream.log" 2>&1 &
+  nohup bash ~/stream_dual.sh > "${AGENTREEL_LOG_DIR}/stream.log" 2>&1 &
   echo $! > "${PID_DIR}/stream.pid"
   log "stream PID: $(cat "${PID_DIR}/stream.pid")"
 }
@@ -136,7 +140,7 @@ restart_stream() {
 # --- Health checks (beyond PID liveness) ---
 check_relay_health() {
   if ! is_alive relay; then return 1; fi
-  local relay_port="${RELAY_PORT:-8765}"
+  local relay_port="${AGENTREEL_RELAY_PORT}"
   if ! (echo >/dev/tcp/127.0.0.1/$relay_port) 2>/dev/null; then
     log "relay PID alive but port $relay_port not listening"
     local pid
@@ -171,7 +175,7 @@ check_ffmpeg_health() {
 
 # --- Main ---
 acquire_lock
-mkdir -p "$PID_DIR" "${AGENTREEL_DIR}/logs" ~/logs
+mkdir -p "$PID_DIR" "${AGENTREEL_LOG_DIR}" ~/logs
 log "=== Watchdog v2 started (PID $$, check every ${CHECK_INTERVAL}s) ==="
 
 while true; do

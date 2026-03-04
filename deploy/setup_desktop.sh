@@ -7,15 +7,21 @@ export TZ=UTC
 #   Left:  Terminal (showing task loop / agent output)
 #   Right: Browser with AgentReel Live Viewer
 #
-# Run inside VNC session (DISPLAY=:1).
+# Run inside VNC session (DISPLAY configured in config.env).
 # Prerequisites: wmctrl, firefox or chromium-browser
 #
-# Usage: DISPLAY=:1 ./setup_desktop.sh
+# Usage: ./setup_desktop.sh
 
-DISPLAY="${DISPLAY:-:1}"
+# Load centralized config
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_config="${SCRIPT_DIR}/../lib/config.sh"
+[ -f "$_config" ] && . "$_config"
+[ -f "${AGENTREEL_DIR:-$HOME/.agentreel}/lib/config.sh" ] && . "${AGENTREEL_DIR:-$HOME/.agentreel}/lib/config.sh"
+
+DISPLAY="${DISPLAY:-${AGENTREEL_DISPLAY}}"
 export DISPLAY
 
-RELAY_PORT="${RELAY_PORT:-8765}"
+RELAY_PORT="${AGENTREEL_RELAY_PORT}"
 RELAY_HOST="${RELAY_HOST:-localhost}"
 AGENTREEL_URL="${AGENTREEL_URL:-https://agentreel.agent-status.com}"
 

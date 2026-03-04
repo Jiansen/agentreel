@@ -14,15 +14,19 @@ export TZ=UTC
 #   export YT_STREAM_KEY="xxxx-xxxx-xxxx-xxxx"
 #   export TW_RTMP_URL="rtmp://fra05.contribute.live-video.net/app"
 #   export TW_STREAM_KEY="live_xxxxxxxx"
-#   export DISPLAY_NUM=:100    # broadcast display (not :99 which is the agent workspace)
-#   export BITRATE=4500k
 #
 # At least one platform (YT or TW) must be configured.
 
-DISPLAY_NUM="${DISPLAY_NUM:-:100}"
-RESOLUTION="${RESOLUTION:-1920x1080}"
-FPS="${FPS:-30}"
-BITRATE="${BITRATE:-2500k}"
+# Load centralized config
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_config="${SCRIPT_DIR}/../lib/config.sh"
+[ -f "$_config" ] && . "$_config"
+[ -f "${AGENTREEL_DIR:-$HOME/.agentreel}/lib/config.sh" ] && . "${AGENTREEL_DIR:-$HOME/.agentreel}/lib/config.sh"
+
+DISPLAY_NUM="${DISPLAY_NUM:-${AGENTREEL_BROADCAST_DISPLAY}}"
+RESOLUTION="${RESOLUTION:-${AGENTREEL_RESOLUTION}}"
+FPS="${FPS:-${AGENTREEL_FPS}}"
+BITRATE="${BITRATE:-${AGENTREEL_BITRATE}}"
 RESTART_DELAY="${RESTART_DELAY:-10}"
 RECORD_LOCAL="${RECORD_LOCAL:-false}"
 RECORDINGS_DIR="${RECORDINGS_DIR:-$HOME/recordings}"

@@ -18,8 +18,14 @@ export TZ=UTC
 #   - relay_server.py, task_loop.sh, stream_dual.sh, setup_desktop.sh, watchdog.sh in ~/
 #   - (Optional) ~/stream.env with YT_*/TW_* for YouTube/Twitch streaming
 
+# Load centralized config
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_config="${SCRIPT_DIR}/../lib/config.sh"
+[ -f "$_config" ] && . "$_config"
+[ -f "${AGENTREEL_DIR:-$HOME/.agentreel}/lib/config.sh" ] && . "${AGENTREEL_DIR:-$HOME/.agentreel}/lib/config.sh"
+
 ZAI_API_KEY="${ZAI_API_KEY:?Set ZAI_API_KEY for OpenClaw model provider}"
-RELAY_PORT="${RELAY_PORT:-8765}"
+RELAY_PORT="${AGENTREEL_RELAY_PORT}"
 
 log() { echo "[go-live] $(date +"%Y-%m-%dT%H:%M:%SZ") $*"; }
 mkdir -p ~/pids ~/logs ~/digests
@@ -34,16 +40,16 @@ else
   ~/start-vnc.sh
   sleep 3
 fi
-export DISPLAY=:1
+export DISPLAY="${AGENTREEL_DISPLAY}"
 
 # [2/6] Relay server
 log "[2/6] Starting relay server on :${RELAY_PORT}..."
 pkill -f "relay_server.py" 2>/dev/null || true
 sleep 1
-nohup python3 ~/relay_server.py \
-  --watch-dir ~/.openclaw/agents/main/sessions/ \
+nohup python3 "${AGENTREEL_DIR}/server/relay_server.py" \
+  --watch-dir "${AGENTREEL_WATCH_DIR}" \
   --port "$RELAY_PORT" \
-  > ~/logs/relay.log 2>&1 &
+  > "${AGENTREEL_LOG_DIR}/relay.log" 2>&1 &
 echo $! > ~/pids/relay.pid
 log "relay PID: $(cat ~/pids/relay.pid)"
 

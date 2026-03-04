@@ -62,6 +62,38 @@ When something isn't working, follow this sequence:
    - **No sessions visible**: check the watch directory exists: `ls ~/.openclaw/agents/main/sessions/`
    - **Relay not starting**: ensure Python 3.10+ is installed: `python3 --version`
 
+## Quality Assurance (Self-Check)
+
+You can perform structured QA on the AgentReel deployment. This is useful after
+deployments, when issues are reported, or as periodic health checks.
+
+### Quick infrastructure check (JSON output for agents)
+
+```bash
+agentreel doctor --agent
+```
+
+This outputs machine-readable JSON with all check results, endpoint URLs, and
+vision model detection. Parse the JSON to determine next steps.
+
+### Full QA with visual checks
+
+Read `AGENT_QA.md` in the AgentReel install directory for the complete checklist.
+It covers:
+
+1. **Infrastructure** (automated via `doctor --agent`)
+2. **Visual QA** (screenshot the /live page, analyze with `image` tool)
+3. **Functional QA** (test relay SSE, history API, VNC status)
+
+To perform visual QA:
+```
+browser action=open url="http://localhost:3000/live"
+browser action=screenshot fullPage=true
+image prompt="Analyze this broadcast page layout..." image="<screenshot_path>"
+```
+
+Report findings in the structured format defined in AGENT_QA.md Section 4.
+
 ## Format Tags
 
 Your output is displayed in the AgentReel live viewer. Use these tags to make
