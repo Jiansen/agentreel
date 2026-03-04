@@ -1,0 +1,15 @@
+[Unit]
+Description=AgentReel Relay Server (SSE event bridge)
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/bin/bash -c '. $HOME/.agentreel/lib/config.sh && exec python3 $AGENTREEL_DIR/server/relay_server.py --watch-dir $AGENTREEL_WATCH_DIR --port $AGENTREEL_RELAY_PORT'
+Restart=always
+RestartSec=5
+Environment=HOME=/home/ubuntu
+WorkingDirectory=/home/ubuntu/.agentreel
+User=ubuntu
+
+[Install]
+WantedBy=multi-user.target

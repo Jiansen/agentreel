@@ -1,0 +1,20 @@
+[Unit]
+Description=AgentReel Dual Stream (YouTube + Twitch RTMP)
+After=network.target
+ConditionFileNotEmpty=/home/ubuntu/stream.env
+
+[Service]
+Type=simple
+ExecStart=/bin/bash -c '. $HOME/.agentreel/lib/config.sh && exec bash $HOME/.agentreel/deploy/stream_dual.sh'
+Restart=always
+RestartSec=10
+Environment=HOME=/home/ubuntu
+EnvironmentFile=-/home/ubuntu/.agentreel/config.env
+EnvironmentFile=-/home/ubuntu/stream.env
+WorkingDirectory=/home/ubuntu
+User=ubuntu
+KillMode=mixed
+TimeoutStopSec=15
+
+[Install]
+WantedBy=multi-user.target
