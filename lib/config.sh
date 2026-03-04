@@ -44,11 +44,14 @@ export AGENTREEL_LOG_DIR="${AGENTREEL_DIR}/logs"
 _user_config="${AGENTREEL_DIR}/config.env"
 if [ -f "$_user_config" ]; then
   # shellcheck source=/dev/null
-  . "$_user_config"
+  . "$_user_config" || true
 fi
 
 # Also load stream.env if present (streaming keys etc.)
 _stream_env="${AGENTREEL_DIR}/stream.env"
-[ -f "$_stream_env" ] && . "$_stream_env"
+[ -f "$_stream_env" ] && . "$_stream_env" || true
 _stream_env2="$HOME/stream.env"
-[ -f "$_stream_env2" ] && . "$_stream_env2"
+[ -f "$_stream_env2" ] && . "$_stream_env2" || true
+
+# Ensure clean exit status when sourced under set -e
+true
