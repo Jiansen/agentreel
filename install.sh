@@ -380,6 +380,8 @@ get_local_version() {
 }
 
 check_update() {
+  [ "${AGENTREEL_NO_AUTO_UPDATE:-0}" = "1" ] && return 0
+
   local current
   current=$(get_local_version)
   [ "$current" = "unknown" ] && return 0
@@ -544,6 +546,12 @@ cmd_stream() {
 }
 
 cmd_update() {
+  if [ "${AGENTREEL_NO_AUTO_UPDATE:-0}" = "1" ]; then
+    echo "Updates disabled (AGENTREEL_NO_AUTO_UPDATE=1 in config.env)"
+    echo "To force: AGENTREEL_NO_AUTO_UPDATE=0 agentreel update"
+    return 0
+  fi
+
   local old_ver
   old_ver=$(get_local_version)
   echo "Updating AgentReel (current: v${old_ver})..."
