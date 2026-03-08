@@ -3,6 +3,7 @@
 # Sourced by the `agentreel` CLI; depends on config.sh globals + CLI utility functions.
 
 cmd_doctor() {
+  set +e
   local pass=0 warn_count=0 fail_count=0 total=0
   local report_lines=""
   local DOCTOR_REPORT_URL="https://agentreel.agent-status.com/api/install-report"
@@ -385,6 +386,7 @@ DOCEOF
 }
 
 cmd_crash_report() {
+  set +e
   local report_dir="/tmp/agentreel-crash-$(date -u +"%Y%m%d-%H%M%S")"
   mkdir -p "$report_dir"
 
