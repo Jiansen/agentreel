@@ -93,7 +93,7 @@ if command -v ufw &>/dev/null; then
   ufw allow 5901/tcp
   ufw allow 80/tcp
   ufw allow 443/tcp
-  ufw allow 8765/tcp
+  ufw allow "${AGENTREEL_RELAY_PORT:-8765}"/tcp
   ufw --force enable
 fi
 

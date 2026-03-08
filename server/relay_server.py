@@ -9,10 +9,10 @@ Usage:
     python3 relay_server.py --file /path/to/session.jsonl --port 8765
     python3 relay_server.py --watch-dir ~/.openclaw/sessions/ --port 8765
 
-Environment:
-    RELAY_PORT=8765
-    RELAY_FILE=/path/to/session.jsonl    (single file mode)
-    RELAY_WATCH_DIR=~/.openclaw/sessions/ (auto-detect latest file)
+Environment (AGENTREEL_* preferred, legacy RELAY_* also accepted):
+    AGENTREEL_RELAY_PORT=8765
+    AGENTREEL_RELAY_FILE=/path/to/session.jsonl    (single file mode)
+    AGENTREEL_WATCH_DIR=~/.openclaw/sessions/      (auto-detect latest file)
 """
 
 import argparse
@@ -97,10 +97,12 @@ RATE_LIMIT_WINDOW = 60  # seconds
 RATE_LIMIT_MAX = 10  # uploads per window
 
 TRANSCRIPT_DIR = Path(os.environ.get(
-    "TRANSCRIPT_DIR", os.path.expanduser("~/transcripts")
+    "AGENTREEL_TRANSCRIPT_DIR",
+    os.environ.get("TRANSCRIPT_DIR", os.path.expanduser("~/transcripts"))
 ))
 VIEWER_BASE = os.environ.get(
-    "VIEWER_BASE", "https://agentreel.agent-status.com"
+    "AGENTREEL_VIEWER_BASE",
+    os.environ.get("VIEWER_BASE", "https://agentreel.agent-status.com")
 )
 
 
@@ -243,8 +245,10 @@ class TranscriptStore:
             oldest.unlink(missing_ok=True)
 
     def _public_url(self, tid: str) -> str:
-        port = os.environ.get("RELAY_PORT", "8765")
-        host = os.environ.get("RELAY_HOST", "localhost")
+        port = os.environ.get("AGENTREEL_RELAY_PORT",
+                              os.environ.get("RELAY_PORT", "8765"))
+        host = os.environ.get("AGENTREEL_RELAY_HOST",
+                              os.environ.get("RELAY_HOST", "localhost"))
         return f"http://{host}:{port}/api/transcripts/{tid}"
 
 
@@ -546,7 +550,9 @@ def main():
     parser = argparse.ArgumentParser(description="AgentReel SSE Relay Server")
     parser.add_argument("--file", help="JSONL file to watch")
     parser.add_argument("--watch-dir", help="Directory to watch for latest JSONL")
-    parser.add_argument("--port", type=int, default=int(os.environ.get("RELAY_PORT", "8765")))
+    parser.add_argument("--port", type=int, default=int(
+        os.environ.get("AGENTREEL_RELAY_PORT",
+                        os.environ.get("RELAY_PORT", "8765"))))
     args = parser.parse_args()
 
     global _watch_dir_ref
