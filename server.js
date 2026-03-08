@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const { createServer } = require("http");
 const { parse } = require("url");
 const next = require("next");
@@ -15,6 +16,7 @@ app.prepare().then(() => {
     handle(req, res, parse(req.url || "/", true));
   });
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   server.on("upgrade", (req, socket, head) => {
     const { pathname } = parse(req.url || "/");
 
