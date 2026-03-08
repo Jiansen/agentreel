@@ -48,8 +48,8 @@ cmd_doctor() {
     : # silent header for agent mode
   else
     echo ""
-    echo "AgentReel Doctor v$(get_local_version) — Full System Check"
-    check_update
+    echo "AgentReel Doctor v$(type get_local_version &>/dev/null && get_local_version || echo 'unknown') — Full System Check"
+    type check_update &>/dev/null && check_update
     echo "═══════════════════════════════════════"
     echo ""
   fi
@@ -394,7 +394,7 @@ cmd_crash_report() {
   uname -srm >> "$report_dir/system.txt"
   echo "Node: $(node -v 2>/dev/null || echo N/A)" >> "$report_dir/system.txt"
   echo "Python: $(python3 -V 2>&1 || echo N/A)" >> "$report_dir/system.txt"
-  echo "AgentReel: $(get_local_version)" >> "$report_dir/system.txt"
+  echo "AgentReel: $(type get_local_version &>/dev/null && get_local_version || echo unknown)" >> "$report_dir/system.txt"
   echo "OpenClaw: $(openclaw -V 2>/dev/null || echo N/A)" >> "$report_dir/system.txt"
 
   echo "--- Processes ---" > "$report_dir/processes.txt"

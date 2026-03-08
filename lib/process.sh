@@ -11,8 +11,8 @@ cmd_start() {
   local display_num="${AGENTREEL_DISPLAY}"
   local resolution="${AGENTREEL_RESOLUTION}"
 
-  echo "Starting AgentReel (v$(get_local_version))..."
-  check_update
+  echo "Starting AgentReel (v$(type get_local_version &>/dev/null && get_local_version || echo 'unknown'))..."
+  type check_update &>/dev/null && check_update
 
   mkdir -p "${AGENTREEL_LOG_DIR}" "${AGENTREEL_PID_DIR}"
 
